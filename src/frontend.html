@@ -1,63 +1,274 @@
 <!--
 SPDX-License-Identifier: GPL-3.0-or-later
-GitHub: https://github.com/siiway/subconverter-snippet
+GitHub: siiway / subconverter-snippet
 Only for education and study use.
 本工具仅提供 URL 和 Clash Config 的配置文件格式转换，不存储任何信息，不提供任何代理服务，一切使用产生后果由使用者自行承担，SiiWay Team 及开发本工具的成员不负任何责任.
 -->
 
 <!DOCTYPE html>
-<html>
-
+<html lang="zh-CN">
 <head>
-    <meta charset="utf-8">
-    <title>订阅转换器</title>
-    <script>
-        const script = document.createElement('script');
-        script.src = 'https://github.com/REPOPLACEHOLDER/releases/download/latest/converter.js';
-        document.head.appendChild(script);
-    </script>
-    <style>
-        body {
-            font-family: monospace;
-            padding: 20px;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>订阅转换器</title>
 
-        textarea,
-        pre {
-            width: 100%;
-            font-family: monospace;
-        }
+  <!-- 动态加载 converter.js -->
+  <script>
+    const REPO = 'siiway/subconverter-snippet';
+    const CORE_URL = `https://github.com/${REPO}/releases/download/latest/converter.js`;
+    const script = document.createElement('script');
+    script.src = CORE_URL + '?t=' + Date.now();
+    script.onerror = () => {
+      document.getElementById('output').textContent = '加载失败：无法加载 GitHub Releases 附件';
+    };
+    document.head.appendChild(script);
+  </script>
 
-        button {
-            margin: 5px;
-            padding: 10px;
-        }
-    </style>
+  <style>
+    :root {
+      --bg: #f8f9fa;
+      --card: #ffffff;
+      --text: #212529;
+      --primary: #4361ee;
+      --success: #2fb344;
+      --border: #dee2e6;
+      --shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #121212;
+        --card: #1e1e1e;
+        --text: #e9ecef;
+        --border: #333;
+        --primary: #5c7cfa;
+        --success: #4ade80;
+      }
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 20px;
+    }
+    .container { max-width: 900px; margin: 0 auto; }
+    header { text-align: center; margin-bottom: 2rem; }
+    h1 { font-size: 1.8rem; color: var(--primary); margin-bottom: 0.5rem; }
+    .repo-link { font-size: 0.9rem; color: #666; text-decoration: none; }
+    .repo-link:hover { text-decoration: underline; }
+
+    .card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+    }
+
+    textarea {
+      width: 100%;
+      height: 300px;
+      padding: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      resize: vertical;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 12px;
+      margin: 1rem 0;
+      flex-wrap: wrap;
+    }
+    button {
+      flex: 1;
+      min-width: 120px;
+      padding: 12px;
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-convert { background: var(--primary); color: white; }
+    .btn-convert:hover { background: #3a56d4; transform: translateY(-1px); }
+    .btn-copy { background: var(--success); color: white; }
+    .btn-copy:hover { background: #27a33a; transform: translateY(-1px); }
+    .btn-clear { background: #6c757d; color: white; }
+    .btn-clear:hover { background: #5a6268; }
+
+    pre {
+      background: #f1f3f5;
+      color: #212529;
+      padding: 16px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-size: 13px;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      border: 1px solid var(--border);
+      position: relative;
+    }
+    @media (prefers-color-scheme: dark) {
+      pre { background: #2d2d2d; color: #f8f9fa; }
+    }
+
+    .copy-feedback {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(0,0,0,0.7);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .copy-feedback.show { opacity: 1; }
+
+    .protocols {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 10px;
+      margin-top: 1rem;
+    }
+    .protocol {
+      text-align: center;
+      padding: 10px;
+      background: var(--bg);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      border: 1px solid var(--border);
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 3rem;
+      font-size: 0.8rem;
+      color: #888;
+    }
+  </style>
+
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet">
 </head>
 
 <body>
-    <h1>链接 &lt;-&gt; Clash 订阅转换器（本地执行）</h1>
-    <textarea id="input" placeholder="粘贴订阅链接或 Clash YAML" style="height:300px"></textarea>
-    <br>
-    <button onclick="convert()">链接 → Clash</button>
-    <button onclick="reverse()">Clash → 链接</button>
-    <pre id="output">加载中...</pre>
-    <script>
-        script.onload = () => {
-            document.getElementById('output').textContent = '就绪！';
-        };
-        script.onerror = (e) => {
-            document.getElementById('output').textContent = `错误: ${e}`;
-        }
-        function convert() {
-            const links = document.getElementById('input').value.trim().split('\n').filter(Boolean);
-            document.getElementById('output').textContent = linkToClash(links);
-        }
-        function reverse() {
-            const yaml = document.getElementById('input').value;
-            document.getElementById('output').textContent = clashToLink(yaml);
-        }
-    </script>
-</body>
+  <div class="container">
+    <header>
+      <h1>订阅转换器</h1>
+      <p>支持 <strong>11 种协议</strong> · 纯前端 · 无后端 · 防墙</p>
+      <a href="https://github.com/siiway/subconverter-snippet" target="_blank" class="repo-link">
+        GitHub: siiway/subconverter-snippet
+      </a>
+    </header>
 
+    <div class="card">
+      <textarea id="input" placeholder="在此粘贴订阅链接（每行一个）或 Clash YAML 配置"></textarea>
+
+      <div class="btn-group">
+        <button class="btn-convert" onclick="convert()">链接 → Clash</button>
+        <button class="btn-convert" onclick="reverse()">Clash → 链接</button>
+        <button class="btn-clear" onclick="clearInput()">清空</button>
+      </div>
+
+      <div style="position:relative;">
+        <pre id="output">加载中，请稍候...</pre>
+        <div id="copyFeedback" class="copy-feedback">已复制！</div>
+        <button class="btn-copy" onclick="copyOutput()" style="position:absolute; top:8px; right:8px; padding:8px 12px; font-size:0.9rem;">
+          复制
+        </button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>支持协议</h3>
+      <div class="protocols">
+        <div class="protocol">SS</div>
+        <div class="protocol">SSR</div>
+        <div class="protocol">VMess</div>
+        <div class="protocol">VLESS</div>
+        <div class="protocol">Trojan</div>
+        <div class="protocol">Hysteria2</div>
+        <div class="protocol">TUIC</div>
+        <div class="protocol">WireGuard</div>
+        <div class="protocol">HTTP</div>
+        <div class="protocol">SOCKS5</div>
+      </div>
+    </div>
+
+    <footer>
+      <p>© 2025 SiiWay Team · 仅供学习研究使用</p>
+    </footer>
+  </div>
+
+  <script>
+    const output = document.getElementById('output');
+    const feedback = document.getElementById('copyFeedback');
+
+    script.onload = () => {
+      output.textContent = '就绪！请粘贴内容开始转换';
+    };
+
+    function convert() {
+      const input = document.getElementById('input').value.trim();
+      if (!input) return output.textContent = '请输入内容';
+      const links = input.split('\n').filter(Boolean);
+      try {
+        output.textContent = linkToClash(links);
+      } catch (e) {
+        output.textContent = `转换失败：${e.message}`;
+      }
+    }
+
+    function reverse() {
+      const yaml = document.getElementById('input').value;
+      if (!yaml.trim()) return output.textContent = '请输入 Clash YAML';
+      try {
+        output.textContent = clashToLink(yaml);
+      } catch (e) {
+        output.textContent = `转换失败：${e.message}`;
+      }
+    }
+
+    function clearInput() {
+      document.getElementById('input').value = '';
+      output.textContent = '已清空，请重新输入';
+    }
+
+    async function copyOutput() {
+      const text = output.textContent;
+      if (!text || text.includes('加载中') || text.includes('错误')) return;
+
+      try {
+        await navigator.clipboard.writeText(text);
+        feedback.classList.add('show');
+        setTimeout(() => feedback.classList.remove('show'), 1500);
+      } catch (err) {
+        // fallback
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        feedback.textContent = '已复制*';
+        feedback.classList.add('show');
+        setTimeout(() => {
+          feedback.textContent = '已复制！';
+          feedback.classList.remove('show');
+        }, 1500);
+      }
+    }
+  </script>
+</body>
 </html>

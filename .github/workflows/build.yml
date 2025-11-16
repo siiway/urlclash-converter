@@ -33,8 +33,8 @@ jobs:
           echo "UTC_TIME=$UTC_TIME" >> $GITHUB_OUTPUT
 
           # 进行替换 Repo
-          sed -i "s|REPOPLACEHOLDER|\${{ github.repository }}|g" src/snippet.js
-          sed -i "s|REPOPLACEHOLDER|\${{ github.repository }}|g" src/frontend.html
+          sed -i "s|siiway/subconverter-snippet|\${{ github.repository }}|g" src/snippet.js
+          sed -i "s|siiway/subconverter-snippet|\${{ github.repository }}|g" src/frontend.html
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
