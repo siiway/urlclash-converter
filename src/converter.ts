@@ -776,33 +776,66 @@ function URI_Trojan(line: string): IProxyTrojanConfig {
 }
 
 function URI_Hysteria2(line: string): IProxyHysteria2Config {
-  const url = new URL(line.split("hysteria2://")[1].split("#")[0]);
-  const name = decodeURIComponent(line.split("#")[1] || "");
+  // 兼容 # 前后都有可能带 ? 的错误格式
+  const hashIndex = line.indexOf("#");
+  const mainPart = hashIndex !== -1 ? line.slice(0, hashIndex) : line;
+  const namePart = hashIndex !== -1 ? line.slice(hashIndex + 1) : "";
+  const name = decodeURIComponent(namePart) || "Hysteria2 Node";
+
+  // 移除协议头和 # 后的部分，拿到中间核心
+  const core = mainPart.replace(/^(hysteria2|hy2):\/\//i, "");
+
+  // 提取 auth（密码）
+  const atIndex = core.lastIndexOf("@");
+  if (atIndex === -1) throw Error("No password (auth) found in hysteria2 link");
+  const passwordRaw = core.slice(0, atIndex);
+  const addrAndQuery = core.slice(atIndex + 1);
+
+  const password = decodeURIComponent(passwordRaw);
+
+  // 分离地址和查询参数
+  const [addr, query = ""] = addrAndQuery.split("?");
+  const params = new URLSearchParams(query);
+
+  // 解析 server:port
+  const colonIndex = addr.lastIndexOf(":");
+  if (colonIndex === -1)
+    throw Error("No password (auth) found in hysteria2 link");
+  const server = addr.slice(0, colonIndex);
+  const port = parseInt(addr.slice(colonIndex + 1)) || 443;
 
   const proxy: IProxyHysteria2Config = {
-    name: name.trim() || "Hysteria2",
+    name: name.trim(),
     type: "hysteria2",
-    server: url.hostname,
-    port: parseInt(url.port) || 443,
-    password: decodeURIComponent(url.username),
+    server,
+    port,
+    password,
+    // 以下字段 Clash Meta / Mihomo 完全支持，必须加上！
+    ...(params.get("insecure") === "1" && { "skip-cert-verify": true }),
+    ...(params.get("sni") && { sni: params.get("sni")! }),
+    ...(params.get("obfs") && { obfs: params.get("obfs")! }),
+    ...(params.get("obfs-password") && {
+      "obfs-password": params.get("obfs-password")!,
+    }),
   };
 
-  // 解析可选字段
-  const params = url.searchParams;
-  if (params.has("sni")) proxy.sni = params.get("sni")!;
-  if (params.has("obfs")) proxy.obfs = params.get("obfs")!;
-  if (params.has("obfs-password"))
-    proxy["obfs-password"] = params.get("obfs-password")!;
-  if (params.has("insecure"))
-    proxy["skip-cert-verify"] = params.get("insecure") === "1";
-
-  // 修复：解析 alpn
+  // 关键修复：alpn 是 Clash 非常常用字段，必须支持
   if (params.has("alpn")) {
     const alpnStr = params.get("alpn")!;
     proxy.alpn = alpnStr
       .split(",")
       .map((a) => a.trim())
       .filter(Boolean);
+  }
+
+  // 可选：很多用户会写 fingerprint=chrome，也支持一下
+  if (params.has("fp") || params.has("fingerprint")) {
+    proxy.fingerprint = params.get("fp") || params.get("fingerprint")!;
+  }
+
+  // 可选：pinSHA256 证书固定（极少数人用，但官方支持）
+  if (params.has("pinSHA256")) {
+    proxy.fingerprint = params.get("pinSHA256")!; // Clash 用 fingerprint 字段
   }
 
   return proxy;

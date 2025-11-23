@@ -57,6 +57,8 @@ vless://这是UUID@这是服务器:11451?type=tcp&encryption=none&flow=xtls-rprx
 | HTTP(S)      | http       | http:// / https://    | 基础 HTTP 代理                              |
 | SOCKS5       | socks5     | socks5://             | 支持认证                                    |
 
+> 本项目的 Clash 配置示例以 Meta (Mihomo) 核心分支为准.
+
 ## 特点
 
 - 支持多种协议的分享链接和 Clash 配置互转
@@ -86,6 +88,7 @@ Code powered by Grok, under GPL-3.0 License.
 - Clash Verge `tyoes.d.ts` *([`src/types/types.d.ts`](./src/types/types.d.ts) 参考)*: https://github.com/clash-verge-rev/clash-verge-rev/blob/44adf5597546ae2b3c7e3e25418c419760eba7a3/src/types/types.d.ts#L341-L777
 - Clash Meta (Mihomo) 配置文件示例: https://github.com/MetaCubeX/mihomo/blob/140d892ccf309280d08bb0a487c7f5a6d663c5c5/docs/config.yaml#L348-L1064
 - Vless 分享链接提案: https://github.com/XTLS/Xray-core/discussions/716
+- Hysteria2 URL Scheme: https://v2.hysteria.network/zh/docs/developers/URI-Scheme/
 - Tailwind CSS (cdnjs): https://cdnjs.com/libraries/tailwindcss-browser
 
 <details><summary>为什么放弃 Snippet</summary>
@@ -94,6 +97,8 @@ Cloudflare Docs:
 - Snippets 限制: https://developers.cloudflare.com/rules/snippets/#limits
 - 何时使用 Snippets / Workers: https://developers.cloudflare.com/rules/snippets/when-to-use/#conclusion
 - 禁用的函数: https://developers.cloudflare.com/workers/runtime-apis/web-standards/#javascript-standards
+
+如有 API 需求, 可自行提取 src/ 下 TypeScript 文件使用; 如大家都有需求会考虑支持本地运行 API
 
 </details>
 
