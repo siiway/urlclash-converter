@@ -1,6 +1,6 @@
 # urlclash-converter
 
-Clash <-> Link 订阅转换工具
+Clash <-> Link 节点转换工具
 
 ## 使用
 
@@ -32,7 +32,7 @@ proxies:
     public-key: 这是PubKey
 ```
 
-可以用本工具一键转为分享链接:
+可以用本工具一键转为节点分享链接:
 
 ```url
 vless://这是UUID@这是服务器:11451?type=tcp&encryption=none&flow=xtls-rprx-vision&security=reality&sni=www.example-servername-cannot-use.com&fp=chrome&pbk=%E8%BF%99%E6%98%AFPubKey#%E8%BF%99%E6%98%AF%E5%90%8D%E5%AD%97
@@ -42,7 +42,7 @@ vless://这是UUID@这是服务器:11451?type=tcp&encryption=none&flow=xtls-rprx
 
 ## 支持的协议
 
-| 协议类型     | Clash 写法 | 订阅链接格式          | 备注（*可能不完整*支持特性）                |
+| 协议类型     | Clash 写法 | 节点链接格式          | 备注（*可能不完整*支持特性）                |
 | ------------ | ---------- | --------------------- | ------------------------------------------- |
 | Shadowsocks  | ss         | ss://                 | AEAD 全加密、plugin、obfs                   |
 | ShadowsocksR | ssr        | ssr://                | 完整 SSR 参数                               |
@@ -82,7 +82,7 @@ Code powered by Grok + Gemini, under GPL-3.0 License.
 
 由于各协议分享链接的规范和实现参差不齐, 如果使用过程中出现问题 / 输出与你的预期不符, 请 **[提交 Issue](https://github.com/siiway/urlclash-converter/issues/new)** 方便我们修复.
 
-本项目参考使用了 Clash Verge 的订阅链接转换逻辑, 在此感谢.
+本项目参考使用了 Clash Verge 的节点链接转换逻辑, 在此感谢.
 
 ## Ref
 

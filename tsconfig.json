@@ -12,7 +12,12 @@
         "skipLibCheck": true,
         "forceConsistentCasingInFileNames": true,
         "jsx": "react-jsx",
-        "types": []
+        "types": [],
+        "plugins": [
+            {
+                "name": "typescript-yaml-plugin"
+            }
+        ]
     },
     "include": [
         "src",
