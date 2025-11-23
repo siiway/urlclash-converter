@@ -1,4 +1,4 @@
-# subconverter-snippet
+# urlclash-converter
 
 Clash <-> Link 订阅转换工具
 
