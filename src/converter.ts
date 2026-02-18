@@ -601,7 +601,12 @@ function URI_VLESS(line: string): IProxyVlessConfig {
 
   if (!parsed) throw new Error("Invalid VLESS URI");
 
-  const [, uuidRaw, server, portStr, , addons = "", nameRaw] = parsed;
+  const [, uuidRaw, serverRaw, portStr, , addons = "", nameRaw] = parsed;
+  // Strip IPv6 brackets: "[2001:db8::1]" → "2001:db8::1"
+  const server =
+    serverRaw.startsWith("[") && serverRaw.endsWith("]")
+      ? serverRaw.slice(1, -1)
+      : serverRaw;
   let uuid = uuidRaw;
   if (isShadowrocket) {
     uuid = uuidRaw.replace(/^.*?:/g, "");
@@ -710,8 +715,13 @@ function URI_VLESS(line: string): IProxyVlessConfig {
 
 function URI_Trojan(line: string): IProxyTrojanConfig {
   line = line.split("trojan://")[1];
-  const [, passwordRaw, server, , port, , addons = "", nameRaw] =
+  const [, passwordRaw, serverRaw, , port, , addons = "", nameRaw] =
     /^(.*?)@(.*?)(:(\d+))?\/?(\?(.*?))?(?:#(.*?))?$/.exec(line) || [];
+  // Strip IPv6 brackets: "[2001:db8::1]" → "2001:db8::1"
+  const server =
+    serverRaw?.startsWith("[") && serverRaw?.endsWith("]")
+      ? serverRaw.slice(1, -1)
+      : serverRaw;
 
   let portNum = parseInt(`${port}`, 10);
   if (isNaN(portNum)) {
