@@ -6,6 +6,7 @@ import {
   webLightTheme,
   webDarkTheme,
   Button,
+  Input,
   Textarea,
   RadioGroup,
   Radio,
@@ -27,6 +28,10 @@ import {
   WeatherMoonRegular,
   WeatherSunnyRegular,
   LocalLanguageRegular,
+  FolderOpenRegular,
+  GlobeRegular,
+  ArrowDownloadRegular,
+  DismissRegular,
 } from '@fluentui/react-icons';
 import { setParser, linkToClash, clashToLink } from './converter';
 
@@ -90,6 +95,21 @@ const useStyles = makeStyles({
     display: 'flex',
     gap: '8px',
   },
+  ioControls: {
+    display: 'flex',
+    gap: '6px',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+  },
+  urlBar: {
+    display: 'flex',
+    gap: '6px',
+    alignItems: 'center',
+  },
+  urlInput: {
+    flex: 1,
+    minWidth: 0,
+  },
   options: {
     backgroundColor: tokens.colorNeutralBackground1,
     ...shorthands.border('1px', 'solid', tokens.colorNeutralStroke1),
@@ -146,6 +166,14 @@ function AppContent({ isDark, toggleTheme }: { isDark: boolean; toggleTheme: () 
   const [copyRightText, setCopyRightText] = useState(t('copy'));
   const [pasteRightText, setPasteRightText] = useState(t('paste'));
 
+  // URL-load state for each column
+  const [showLeftUrl, setShowLeftUrl] = useState(false);
+  const [showRightUrl, setShowRightUrl] = useState(false);
+  const [leftUrl, setLeftUrl] = useState('');
+  const [rightUrl, setRightUrl] = useState('');
+  const [fetchingLeft, setFetchingLeft] = useState(false);
+  const [fetchingRight, setFetchingRight] = useState(false);
+
   useEffect(() => {
     document.title = t('title');
   }, [t]);
@@ -156,31 +184,80 @@ function AppContent({ isDark, toggleTheme }: { isDark: boolean; toggleTheme: () 
     setPasteLeftText(t('paste'));
     setCopyRightText(t('copy'));
     setPasteRightText(t('paste'));
-  }, [i18n.language, t]);  // Depend on language and t
+  }, [i18n.language, t]);
 
   const changeLanguage = (lng: string) => {
     i18n.changeLanguage(lng);
   };
 
-  const handleCopy = async (text: string, buttonSetter: (text: string) => void, originalText: string) => {
+  const handleCopy = async (text: string, buttonSetter: (text: string) => void) => {
     try {
       await navigator.clipboard.writeText(text);
       buttonSetter(t('copied'));
-      setTimeout(() => buttonSetter(t('copy')), 800);  // Use t('copy') directly in timeout
-    } catch (err) {
+      setTimeout(() => buttonSetter(t('copy')), 800);
+    } catch {
       alert(t('copy-failed'));
     }
   };
 
-  const handlePaste = async (setter: (val: string) => void, buttonSetter: (text: string) => void, originalText: string) => {
+  const handlePaste = async (setter: (val: string) => void, buttonSetter: (text: string) => void) => {
     try {
       const text = await navigator.clipboard.readText();
       setter(text);
       buttonSetter(t('pasted'));
-      setTimeout(() => buttonSetter(t('paste')), 800);  // Use t('paste') directly in timeout
-    } catch (err) {
+      setTimeout(() => buttonSetter(t('paste')), 800);
+    } catch {
       alert(t('paste-failed'));
     }
+  };
+
+  const handleLoadFile = (setter: (val: string) => void) => {
+    const el = document.createElement('input');
+    el.type = 'file';
+    el.accept = '.yaml,.yml,.txt,.conf,.list';
+    el.onchange = () => {
+      const file = el.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => setter(reader.result as string);
+      reader.readAsText(file, 'utf-8');
+    };
+    el.click();
+  };
+
+  const handleFetchUrl = async (
+    url: string,
+    setter: (val: string) => void,
+    setFetching: (v: boolean) => void,
+    setShow: (v: boolean) => void,
+    setUrl: (v: string) => void,
+  ) => {
+    if (!url.trim()) return;
+    setFetching(true);
+    try {
+      const res = await fetch(url.trim());
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setter(await res.text());
+      setShow(false);
+      setUrl('');
+    } catch (err: any) {
+      alert(`${t('fetchFailed')}: ${err.message || err}`);
+    } finally {
+      setFetching(false);
+    }
+  };
+
+  const handleDownload = (content: string, filename: string) => {
+    if (!content.trim()) return;
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const convertToLinks = async () => {
@@ -246,6 +323,66 @@ function AppContent({ isDark, toggleTheme }: { isDark: boolean; toggleTheme: () 
               </Button>
             </div>
           </div>
+
+          {/* I/O controls */}
+          <div className={styles.ioControls}>
+            <Button
+              size="small"
+              appearance="subtle"
+              icon={<FolderOpenRegular />}
+              onClick={() => handleLoadFile(setClashInput)}
+            >
+              {t('loadFile')}
+            </Button>
+            <Button
+              size="small"
+              appearance="subtle"
+              icon={<GlobeRegular />}
+              onClick={() => { setShowLeftUrl(v => !v); setShowRightUrl(false); }}
+            >
+              {t('loadUrl')}
+            </Button>
+            <Button
+              size="small"
+              appearance="subtle"
+              icon={<ArrowDownloadRegular />}
+              disabled={!clashInput.trim()}
+              onClick={() => handleDownload(clashInput, 'clash-config.yaml')}
+            >
+              {t('download')}
+            </Button>
+          </div>
+
+          {showLeftUrl && (
+            <div className={styles.urlBar}>
+              <Input
+                className={styles.urlInput}
+                placeholder={t('urlPlaceholder')}
+                value={leftUrl}
+                onChange={(_, d) => setLeftUrl(d.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !fetchingLeft)
+                    handleFetchUrl(leftUrl, setClashInput, setFetchingLeft, setShowLeftUrl, setLeftUrl);
+                }}
+              />
+              <Button
+                appearance="primary"
+                size="small"
+                disabled={fetchingLeft || !leftUrl.trim()}
+                onClick={() => handleFetchUrl(leftUrl, setClashInput, setFetchingLeft, setShowLeftUrl, setLeftUrl)}
+              >
+                {fetchingLeft ? t('fetching') : t('fetchUrl')}
+              </Button>
+              <Button
+                appearance="subtle"
+                size="small"
+                icon={<DismissRegular />}
+                aria-label={t('cancel')}
+                onClick={() => { setShowLeftUrl(false); setLeftUrl(''); }}
+              />
+            </div>
+          )}
+
           <Textarea
             className={styles.textarea}
             value={clashInput}
@@ -288,6 +425,65 @@ function AppContent({ isDark, toggleTheme }: { isDark: boolean; toggleTheme: () 
               </Button>
             </div>
           </div>
+
+          {/* I/O controls */}
+          <div className={styles.ioControls}>
+            <Button
+              size="small"
+              appearance="subtle"
+              icon={<FolderOpenRegular />}
+              onClick={() => handleLoadFile(setLinksInput)}
+            >
+              {t('loadFile')}
+            </Button>
+            <Button
+              size="small"
+              appearance="subtle"
+              icon={<GlobeRegular />}
+              onClick={() => { setShowRightUrl(v => !v); setShowLeftUrl(false); }}
+            >
+              {t('loadUrl')}
+            </Button>
+            <Button
+              size="small"
+              appearance="subtle"
+              icon={<ArrowDownloadRegular />}
+              disabled={!linksInput.trim()}
+              onClick={() => handleDownload(linksInput, 'node-links.txt')}
+            >
+              {t('download')}
+            </Button>
+          </div>
+
+          {showRightUrl && (
+            <div className={styles.urlBar}>
+              <Input
+                className={styles.urlInput}
+                placeholder={t('urlPlaceholder')}
+                value={rightUrl}
+                onChange={(_, d) => setRightUrl(d.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !fetchingRight)
+                    handleFetchUrl(rightUrl, setLinksInput, setFetchingRight, setShowRightUrl, setRightUrl);
+                }}
+              />
+              <Button
+                appearance="primary"
+                size="small"
+                disabled={fetchingRight || !rightUrl.trim()}
+                onClick={() => handleFetchUrl(rightUrl, setLinksInput, setFetchingRight, setShowRightUrl, setRightUrl)}
+              >
+                {fetchingRight ? t('fetching') : t('fetchUrl')}
+              </Button>
+              <Button
+                appearance="subtle"
+                size="small"
+                icon={<DismissRegular />}
+                aria-label={t('cancel')}
+                onClick={() => { setShowRightUrl(false); setRightUrl(''); }}
+              />
+            </div>
+          )}
 
           {/* Engine Switcher */}
           <div
@@ -405,7 +601,6 @@ function AppContent({ isDark, toggleTheme }: { isDark: boolean; toggleTheme: () 
 }
 
 export default function App() {
-  // Check system preference initially
   const systemPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   const [isDark, setIsDark] = useState(systemPrefersDark);
 
