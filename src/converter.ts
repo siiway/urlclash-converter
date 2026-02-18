@@ -187,7 +187,16 @@ function isIPv6(address: string): boolean {
 
 function decodeBase64OrOriginal(str: string): string {
   try {
-    return atob(str);
+    const binary = atob(str);
+    // Attempt UTF-8 decode so emoji / CJK in vmess JSON and SSR remarks survive the round-trip.
+    // If the bytes aren't valid UTF-8 (e.g. a raw binary SS password) we fall back to the
+    // raw Latin-1 binary string, preserving the old behaviour.
+    try {
+      const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+      return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    } catch {
+      return binary;
+    }
   } catch {
     return str;
   }
@@ -1367,7 +1376,13 @@ export function generateUri(node: any): string {
       };
       // Name is already encoded in the JSON `ps` field; do NOT append #fragment,
       // as '#' is not valid base64 and breaks URI_VMESS parsing on the return trip.
-      return `vmess://${btoa(JSON.stringify(vmess))}`;
+      // Encode as UTF-8 bytes before base64 so emoji / CJK names don't throw in btoa().
+      const jsonStr = JSON.stringify(vmess);
+      const utf8Bytes = new TextEncoder().encode(jsonStr);
+      const vmessBase64 = btoa(
+        utf8Bytes.reduce((acc, b) => acc + String.fromCharCode(b), "")
+      );
+      return `vmess://${vmessBase64}`;
 
     case "vless":
       let link = `vless://${node.uuid}@${server}:${port}`;
