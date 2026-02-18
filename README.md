@@ -76,7 +76,7 @@ vless://这是UUID@这是服务器:11451?type=tcp&encryption=none&flow=xtls-rprx
 
 ## End
 
-Code powered by Grok + Gemini, under GPL-3.0 License.
+Code powered by Grok + Gemini + Claude, under GPL-3.0 License.
 
 本工具仅提供 URL 和 Clash Config 的配置文件格式转换，不存储任何信息，不提供任何代理服务，一切使用产生后果由使用者自行承担，SiiWay Team 及开发本工具的成员 **不负任何责任**.
 
