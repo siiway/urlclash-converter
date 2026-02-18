@@ -51,7 +51,8 @@ export function linkToClash(
 // ====================== 反向：Clash → 链接 ======================
 export async function clashToLink(yamlText: string): Promise<ConvertResult> {
   try {
-    yamlText = yamlText.replace(/[\x00-\x1F\x7F-\x9F]/g, "");
+    // Strip control chars except tab (\x09), LF (\x0A), CR (\x0D) — newlines are required for YAML structure
+    yamlText = yamlText.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, "");
 
     let config: any;
 
@@ -352,6 +353,16 @@ function URI_SSR(line: string): IProxyshadowsocksRConfig {
 
 function URI_VMESS(line: string): IProxyVmessConfig {
   line = line.split("vmess://")[1];
+
+  // Strip #fragment before base64 decoding — some clients append #name to V2rayN URIs,
+  // but '#' is not valid base64 and causes decodeBase64OrOriginal to return the raw string.
+  const hashIndex = line.indexOf("#");
+  const fragment =
+    hashIndex !== -1
+      ? decodeURIComponent(line.slice(hashIndex + 1))
+      : "";
+  if (hashIndex !== -1) line = line.slice(0, hashIndex);
+
   let content = decodeBase64OrOriginal(line);
   if (/=\s*vmess/.test(content)) {
     // Quantumult VMess URI format
@@ -446,6 +457,7 @@ function URI_VMESS(line: string): IProxyVmessConfig {
         trimStr(params.ps) ??
         trimStr(params.remarks) ??
         trimStr(params.remark) ??
+        trimStr(fragment) ??
         `VMess ${server}:${port}`,
       type: "vmess",
       server,
@@ -1353,7 +1365,9 @@ export function generateUri(node: any): string {
         alpn: node.alpn?.join(",") || "",
         fp: node.fingerprint || node["client-fingerprint"] || "",
       };
-      return `vmess://${btoa(JSON.stringify(vmess))}#${name}`;
+      // Name is already encoded in the JSON `ps` field; do NOT append #fragment,
+      // as '#' is not valid base64 and breaks URI_VMESS parsing on the return trip.
+      return `vmess://${btoa(JSON.stringify(vmess))}`;
 
     case "vless":
       let link = `vless://${node.uuid}@${server}:${port}`;

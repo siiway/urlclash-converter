@@ -53,14 +53,15 @@ export async function parsePyYaml(yamlText: string): Promise<any> {
   try {
     const py = await getPyodide();
 
-    // 只清理非法字符，绝不动换行！
-    const safeText = yamlText.replace(/[\x00-\x1F\x7F-\x9F]/g, "");
+    // Strip control chars except tab (\x09), LF (\x0A), CR (\x0D) — newlines are required for YAML structure
+    const safeText = yamlText.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, "");
 
-    // 直接用 py.runPythonAsync 内联，避免 globals.set 吃换行
+    // Pass YAML via globals.set to avoid string-interpolation injection issues
+    py.globals.set("_yaml_input", safeText);
     const result = await py.runPythonAsync(`
 import yaml
-yaml.safe_load("""${safeText}""") or {}
-  `);
+yaml.safe_load(_yaml_input) or {}
+`);
 
     return result?.toJs({ dict_converter: Object.fromEntries }) || {};
   } catch (err: any) {
