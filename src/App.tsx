@@ -310,14 +310,14 @@ function AppContent({ isDark, toggleTheme }: { isDark: boolean; toggleTheme: () 
             <div className={styles.controls}>
               <Button
                 icon={<ClipboardPasteRegular />}
-                onClick={() => handlePaste(setClashInput, setPasteLeftText, t('paste'))}
+                onClick={() => handlePaste(setClashInput, setPasteLeftText)}
               >
                 {pasteLeftText}
               </Button>
               <Button
                 icon={<CopyRegular />}
                 appearance="primary"
-                onClick={() => handleCopy(clashInput, setCopyLeftText, t('copy'))}
+                onClick={() => handleCopy(clashInput, setCopyLeftText)}
               >
                 {copyLeftText}
               </Button>
@@ -412,14 +412,14 @@ function AppContent({ isDark, toggleTheme }: { isDark: boolean; toggleTheme: () 
             <div className={styles.controls}>
               <Button
                 icon={<ClipboardPasteRegular />}
-                onClick={() => handlePaste(setLinksInput, setPasteRightText, t('paste'))}
+                onClick={() => handlePaste(setLinksInput, setPasteRightText)}
               >
                 {pasteRightText}
               </Button>
               <Button
                 icon={<CopyRegular />}
                 appearance="primary"
-                onClick={() => handleCopy(linksInput, setCopyRightText, t('copy'))}
+                onClick={() => handleCopy(linksInput, setCopyRightText)}
               >
                 {copyRightText}
               </Button>
