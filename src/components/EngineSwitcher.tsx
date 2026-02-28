@@ -3,6 +3,7 @@ import {
   SwitchOnChangeData,
   Text,
   tokens,
+  ProgressBar,
 } from "@fluentui/react-components";
 import { useTranslation } from "react-i18next";
 
@@ -31,6 +32,10 @@ export function EngineSwitcher({
         border: `1px solid ${tokens.colorNeutralStroke1}`,
         marginBottom: "16px",
         fontSize: "14px",
+        position: "relative",
+        overflow: "hidden",
+        opacity: pyLoading ? 0.8 : 1,
+        transition: "opacity 0.3s ease",
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
@@ -50,14 +55,18 @@ export function EngineSwitcher({
             {usePyYaml ? t("pyYamlEngine") : t("jsYamlEngine")}
           </Text>
           <Text size={200} style={{ opacity: 0.8 }}>
-            {usePyYaml ? t("pyYamlDesc") : t("jsYamlDesc")}
-            {pyLoading && <> · {t("switchingEngine")}</>}
+            {pyLoading
+              ? t("switchingEngine")
+              : usePyYaml
+                ? t("pyYamlDesc")
+                : t("jsYamlDesc")}
           </Text>
         </div>
       </div>
 
       <Switch
         checked={usePyYaml}
+        disabled={pyLoading} // Disable interaction while loading
         onChange={(_ev, data: SwitchOnChangeData) => onChange(data.checked)}
         label={
           <Text weight="medium">
@@ -65,6 +74,18 @@ export function EngineSwitcher({
           </Text>
         }
       />
+
+      {pyLoading && (
+        <ProgressBar
+          style={{
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            right: 0,
+          }}
+          thickness="medium"
+        />
+      )}
     </div>
   );
 }
