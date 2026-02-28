@@ -19,7 +19,7 @@ export function setParser(type: ParserType) {
 // ====================== 正向：链接 → Clash ======================
 export function linkToClash(
   links: string[],
-  mode: ClashOutputMode = "proxies"
+  mode: ClashOutputMode = "proxies",
 ): ConvertResult {
   const nodeStrings = links
     .map((link) => {
@@ -78,7 +78,7 @@ export async function clashToLink(yamlText: string): Promise<ConvertResult> {
       config?.["payload"],
       // proxy-providers 里嵌套的 payload
       Object.values(config?.["proxy-providers"] || {}).flatMap(
-        (p: any) => p?.proxies || p?.payload || []
+        (p: any) => p?.proxies || p?.payload || [],
       ),
       // 直接就是节点数组的情况
       Array.isArray(config) ? config : null,
@@ -157,7 +157,7 @@ export default function parseUri(uri: string): IProxyConfig {
 
 function getIfNotBlank(
   value: string | undefined,
-  dft?: string
+  dft?: string,
 ): string | undefined {
   return value && value.trim() !== "" ? value : dft;
 }
@@ -245,7 +245,7 @@ function URI_SS(line: string): IProxyShadowsocksConfig {
         if (v2rayPlugin) {
           proxy.plugin = "v2ray-plugin";
           proxy["plugin-opts"] = JSON.parse(
-            decodeBase64OrOriginal(v2rayPlugin)
+            decodeBase64OrOriginal(v2rayPlugin),
           );
         }
       }
@@ -258,7 +258,7 @@ function URI_SS(line: string): IProxyShadowsocksConfig {
   const portIdx = serverAndPort?.lastIndexOf(":") ?? 0;
   proxy.server = serverAndPort?.substring(0, portIdx) ?? "";
   proxy.port = parseInt(
-    `${serverAndPort?.substring(portIdx + 1)}`.match(/\d+/)?.[0] ?? ""
+    `${serverAndPort?.substring(portIdx + 1)}`.match(/\d+/)?.[0] ?? "",
   );
   const userInfo = userInfoStr.match(/(^.*?):(.*$)/);
   proxy.cipher = getCipher(userInfo?.[1]);
@@ -317,7 +317,7 @@ function URI_SSR(line: string): IProxyshadowsocksRConfig {
   const serverAndPort = line.substring(0, splitIdx);
   const server = serverAndPort.substring(0, serverAndPort.lastIndexOf(":"));
   const port = parseInt(
-    serverAndPort.substring(serverAndPort.lastIndexOf(":") + 1)
+    serverAndPort.substring(serverAndPort.lastIndexOf(":") + 1),
   );
 
   const params = line
@@ -349,12 +349,12 @@ function URI_SSR(line: string): IProxyshadowsocksRConfig {
     ...proxy,
     name: other_params.remarks
       ? decodeBase64OrOriginal(other_params.remarks).trim()
-      : proxy.server ?? "",
+      : (proxy.server ?? ""),
     "protocol-param": getIfNotBlank(
-      decodeBase64OrOriginal(other_params.protoparam || "").replace(/\s/g, "")
+      decodeBase64OrOriginal(other_params.protoparam || "").replace(/\s/g, ""),
     ),
     "obfs-param": getIfNotBlank(
-      decodeBase64OrOriginal(other_params.obfsparam || "").replace(/\s/g, "")
+      decodeBase64OrOriginal(other_params.obfsparam || "").replace(/\s/g, ""),
     ),
   };
   return proxy;
@@ -367,9 +367,7 @@ function URI_VMESS(line: string): IProxyVmessConfig {
   // but '#' is not valid base64 and causes decodeBase64OrOriginal to return the raw string.
   const hashIndex = line.indexOf("#");
   const fragment =
-    hashIndex !== -1
-      ? decodeURIComponent(line.slice(hashIndex + 1))
-      : "";
+    hashIndex !== -1 ? decodeURIComponent(line.slice(hashIndex + 1)) : "";
   if (hashIndex !== -1) line = line.slice(0, hashIndex);
 
   let content = decodeBase64OrOriginal(line);
@@ -405,7 +403,7 @@ function URI_VMESS(line: string): IProxyVmessConfig {
         proxy["ws-opts"] = {
           path:
             (getIfNotBlank(params["obfs-path"]) || '"/"').match(
-              /^"(.*)"$/
+              /^"(.*)"$/,
             )?.[1] || "/",
           headers: {
             Host:
@@ -429,7 +427,7 @@ function URI_VMESS(line: string): IProxyVmessConfig {
       // Shadowrocket URI format
       console.warn(
         "[URI_VMESS] JSON.parse(content) failed, falling back to Shadowrocket parsing:",
-        e
+        e,
       );
       const match = /(^[^?]+?)\/?\?(.*)$/.exec(line);
       if (match) {
@@ -653,7 +651,7 @@ function URI_VLESS(line: string): IProxyVlessConfig {
     ? params.alpn.split(",").map((a) => a.trim())
     : undefined;
   proxy["skip-cert-verify"] = /(TRUE|1)/i.test(
-    params.allowinsecure || params.allowInsecure || ""
+    params.allowinsecure || params.allowInsecure || "",
   );
 
   // Reality 参数
@@ -1390,7 +1388,7 @@ export function generateUri(node: any): string {
       const jsonStr = JSON.stringify(vmess);
       const utf8Bytes = new TextEncoder().encode(jsonStr);
       const vmessBase64 = btoa(
-        utf8Bytes.reduce((acc, b) => acc + String.fromCharCode(b), "")
+        utf8Bytes.reduce((acc, b) => acc + String.fromCharCode(b), ""),
       );
       return `vmess://${vmessBase64}`;
 
@@ -1429,7 +1427,7 @@ export function generateUri(node: any): string {
 
     case "trojan":
       let trojan = `trojan://${encodeURIComponent(
-        node.password || ""
+        node.password || "",
       )}@${server}:${port}`;
       const tParams = new URLSearchParams();
       if (node.network && node.network !== "tcp")
@@ -1446,7 +1444,7 @@ export function generateUri(node: any): string {
 
     case "hysteria2":
       let hy2 = `hysteria2://${encodeURIComponent(
-        node.password || ""
+        node.password || "",
       )}@${server}:${port}`;
       const hyParams = new URLSearchParams();
 
@@ -1469,7 +1467,7 @@ export function generateUri(node: any): string {
 
     case "tuic":
       let tuic = `tuic://${node.uuid}:${encodeURIComponent(
-        node.password || ""
+        node.password || "",
       )}@${server}:${port}`;
       const tuicParams = new URLSearchParams();
       if (node.sni) tuicParams.set("sni", node.sni);

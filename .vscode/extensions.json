@@ -1,7 +1,7 @@
 {
-    "recommendations": [
-        "lokalise.i18n-ally",
-        "esbenp.prettier-vscode",
-        "redhat.vscode-yaml"
-    ]
+  "recommendations": [
+    "lokalise.i18n-ally",
+    "esbenp.prettier-vscode",
+    "redhat.vscode-yaml"
+  ]
 }

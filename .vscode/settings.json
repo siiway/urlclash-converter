@@ -1,13 +1,11 @@
 {
-    "typescript.tsdk": "node_modules/typescript/lib",
-    "files.associations": {
-        "CONTRIBUTING": "markdown"
-    },
-    "i18n-ally.localesPaths": [
-        "src/i18n/locales"
-    ],
-    "i18n-ally.keystyle": "flat",
-    "[yaml]": {
-        "editor.defaultFormatter": "redhat.vscode-yaml"
-    }
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "files.associations": {
+    "CONTRIBUTING": "markdown"
+  },
+  "i18n-ally.localesPaths": ["src/i18n/locales"],
+  "i18n-ally.keystyle": "flat",
+  "[yaml]": {
+    "editor.defaultFormatter": "redhat.vscode-yaml"
+  }
 }

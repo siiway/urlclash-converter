@@ -17,19 +17,19 @@ Clash <-> Link 节点转换工具
 ```yaml
 # 已脱敏
 proxies:
-- name: 这是名字
-  type: vless
-  server: 这是服务器
-  port: 11451
-  uuid: 这是UUID
-  network: tcp
-  tls: true
-  skip-cert-verify: false
-  servername: www.example-servername-cannot-use.com
-  client-fingerprint: chrome
-  flow: xtls-rprx-vision
-  reality-opts:
-    public-key: 这是PubKey
+  - name: 这是名字
+    type: vless
+    server: 这是服务器
+    port: 11451
+    uuid: 这是UUID
+    network: tcp
+    tls: true
+    skip-cert-verify: false
+    servername: www.example-servername-cannot-use.com
+    client-fingerprint: chrome
+    flow: xtls-rprx-vision
+    reality-opts:
+      public-key: 这是PubKey
 ```
 
 可以用本工具一键转为节点分享链接:
@@ -72,7 +72,7 @@ vless://这是UUID@这是服务器:11451?type=tcp&encryption=none&flow=xtls-rprx
 1. Fork 本项目
 2. 到仓库 Settings -> Pages 启用 Pages 功能 (`Source` 选择 `GitHub Actions`)
 3. 到 Actions 启用并手动触发 `Deploy to GitHub Pages` 工作流
-4. *(可选) 到 Settings -> Pages 配置自定义域名*
+4. _(可选) 到 Settings -> Pages 配置自定义域名_
 
 ## End
 
@@ -86,8 +86,8 @@ Code powered by Grok + Gemini + Claude, under GPL-3.0 License.
 
 ## Ref
 
-- Clash Verge `uri-parser.ts` *([`src/converter.ts`](./src/converter.ts) 参考)*: https://github.com/clash-verge-rev/clash-verge-rev/blob/44adf5597546ae2b3c7e3e25418c419760eba7a3/src/utils/uri-parser.ts
-- Clash Verge `types.d.ts` *([`src/types/types.d.ts`](./src/types/types.d.ts) 参考)*: https://github.com/clash-verge-rev/clash-verge-rev/blob/44adf5597546ae2b3c7e3e25418c419760eba7a3/src/types/types.d.ts#L341-L777
+- Clash Verge `uri-parser.ts` _([`src/converter.ts`](./src/converter.ts) 参考)_: https://github.com/clash-verge-rev/clash-verge-rev/blob/44adf5597546ae2b3c7e3e25418c419760eba7a3/src/utils/uri-parser.ts
+- Clash Verge `types.d.ts` _([`src/types/types.d.ts`](./src/types/types.d.ts) 参考)_: https://github.com/clash-verge-rev/clash-verge-rev/blob/44adf5597546ae2b3c7e3e25418c419760eba7a3/src/types/types.d.ts#L341-L777
 - Clash Meta (Mihomo) 配置文件示例: https://github.com/MetaCubeX/mihomo/blob/140d892ccf309280d08bb0a487c7f5a6d663c5c5/docs/config.yaml#L348-L1064
 - Vless 分享链接提案: https://github.com/XTLS/Xray-core/discussions/716
 - Hysteria2 URL Scheme: https://v2.hysteria.network/zh/docs/developers/URI-Scheme/
@@ -96,6 +96,7 @@ Code powered by Grok + Gemini + Claude, under GPL-3.0 License.
 <details><summary>为什么放弃 Snippet</summary>
 
 Cloudflare Docs:
+
 - Snippets 限制: https://developers.cloudflare.com/rules/snippets/#limits
 - 何时使用 Snippets / Workers: https://developers.cloudflare.com/rules/snippets/when-to-use/#conclusion
 - 禁用的函数: https://developers.cloudflare.com/workers/runtime-apis/web-standards/#javascript-standards
