@@ -814,8 +814,8 @@ function URI_ANYTLS(line: string): IProxyConfig {
   let password = passwordRaw;
   password = decodeURIComponent(password);
 
-  const decodedName = trimStr(decodeURIComponent(nameRaw));
-  const name = decodedName ?? `anytls ${server}:${portNum}`;
+  const decodedName = trimStr(decodeURIComponent(nameRaw || ""));
+  const name = decodedName || `anytls ${server}:${portNum}`;
 
   const proxy: IProxyConfig = {
     type: "anytls",
