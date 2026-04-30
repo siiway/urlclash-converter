@@ -17,10 +17,7 @@ export function setParser(type: ParserType) {
 }
 
 // ====================== 正向：链接 → Clash ======================
-export function linkToClash(
-  links: string[],
-  mode: ClashOutputMode = "proxies",
-): ConvertResult {
+export function linkToClash(links: string[], mode: ClashOutputMode = "proxies"): ConvertResult {
   let nodeStrings = linksToClashNodes(links);
 
   if (nodeStrings.length === 0) {
@@ -39,8 +36,7 @@ export function linkToClash(
 
   const content = nodeStrings.join("\n");
 
-  if (mode === "payload")
-    return { success: true, data: `payload:\n${content}` };
+  if (mode === "payload") return { success: true, data: `payload:\n${content}` };
   if (mode === "none") return { success: true, data: content };
   return { success: true, data: `proxies:\n${content}` };
 }
@@ -63,10 +59,7 @@ function tryDecodeBase64SubscriptionLinks(links: string[]): string[] | null {
   const rawText = links.join("\n").trim();
   if (!rawText) return null;
 
-  const normalized = rawText
-    .replace(/\s+/g, "")
-    .replace(/-/g, "+")
-    .replace(/_/g, "/");
+  const normalized = rawText.replace(/\s+/g, "").replace(/-/g, "+").replace(/_/g, "/");
 
   if (!/^[A-Za-z0-9+/=]+$/.test(normalized)) return null;
 
@@ -79,11 +72,7 @@ function tryDecodeBase64SubscriptionLinks(links: string[]): string[] | null {
     .map((line) => line.trim())
     .filter(Boolean);
 
-  if (
-    !decodedLinks.some((line) =>
-      /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(line)
-    )
-  ) {
+  if (!decodedLinks.some((line) => /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(line))) {
     return null;
   }
 
@@ -119,9 +108,7 @@ export async function clashToLink(yamlText: string): Promise<ConvertResult> {
       config?.["Proxy"],
       config?.["payload"],
       // proxy-providers 里嵌套的 payload
-      Object.values(config?.["proxy-providers"] || {}).flatMap(
-        (p: any) => p?.proxies || p?.payload || [],
-      ),
+      Object.values(config?.["proxy-providers"] || {}).flatMap((p: any) => p?.proxies || p?.payload || []),
       // 直接就是节点数组的情况
       Array.isArray(config) ? config : null,
     ]
@@ -156,9 +143,7 @@ export async function clashToLink(yamlText: string): Promise<ConvertResult> {
   } catch (e: any) {
     return {
       success: false,
-      data: `# YAML 解析失败: ${e.message || e}\n# YAML parse failed: ${
-        e.message || e
-      }`,
+      data: `# YAML 解析失败: ${e.message || e}\n# YAML parse failed: ${e.message || e}`,
     };
   }
 }
@@ -177,6 +162,8 @@ export default function parseUri(uri: string): IProxyConfig {
       return URI_VLESS(uri);
     case "trojan":
       return URI_Trojan(uri);
+    case "anytls":
+      return URI_ANYTLS(uri);
     case "hysteria2":
     case "hy2":
       return URI_Hysteria2(uri);
@@ -197,10 +184,7 @@ export default function parseUri(uri: string): IProxyConfig {
   }
 }
 
-function getIfNotBlank(
-  value: string | undefined,
-  dft?: string,
-): string | undefined {
+function getIfNotBlank(value: string | undefined, dft?: string): string | undefined {
   return value && value.trim() !== "" ? value : dft;
 }
 
@@ -300,9 +284,7 @@ function URI_SS(line: string): IProxyShadowsocksConfig {
         const v2rayPlugin = parsed![2];
         if (v2rayPlugin) {
           proxy.plugin = "v2ray-plugin";
-          proxy["plugin-opts"] = JSON.parse(
-            decodeBase64OrOriginal(v2rayPlugin),
-          );
+          proxy["plugin-opts"] = JSON.parse(decodeBase64OrOriginal(v2rayPlugin));
         }
       }
       content = `${content}${query}`;
@@ -313,9 +295,7 @@ function URI_SS(line: string): IProxyShadowsocksConfig {
   const serverAndPort = serverAndPortArray?.[1];
   const portIdx = serverAndPort?.lastIndexOf(":") ?? 0;
   proxy.server = serverAndPort?.substring(0, portIdx) ?? "";
-  proxy.port = parseInt(
-    `${serverAndPort?.substring(portIdx + 1)}`.match(/\d+/)?.[0] ?? "",
-  );
+  proxy.port = parseInt(`${serverAndPort?.substring(portIdx + 1)}`.match(/\d+/)?.[0] ?? "");
   const userInfo = userInfoStr.match(/(^.*?):(.*$)/);
   proxy.cipher = getCipher(userInfo?.[1]);
   proxy.password = userInfo?.[2];
@@ -323,9 +303,7 @@ function URI_SS(line: string): IProxyShadowsocksConfig {
   // handle obfs
   const idx = content.indexOf("?plugin=");
   if (idx !== -1) {
-    const pluginInfo = (
-      "plugin=" + decodeURIComponent(content.split("?plugin=")[1].split("&")[0])
-    ).split(";");
+    const pluginInfo = ("plugin=" + decodeURIComponent(content.split("?plugin=")[1].split("&")[0])).split(";");
     const params: Record<string, any> = {};
     for (const item of pluginInfo) {
       const [key, val] = item.split("=");
@@ -372,9 +350,7 @@ function URI_SSR(line: string): IProxyshadowsocksRConfig {
   }
   const serverAndPort = line.substring(0, splitIdx);
   const server = serverAndPort.substring(0, serverAndPort.lastIndexOf(":"));
-  const port = parseInt(
-    serverAndPort.substring(serverAndPort.lastIndexOf(":") + 1),
-  );
+  const port = parseInt(serverAndPort.substring(serverAndPort.lastIndexOf(":") + 1));
 
   const params = line
     .substring(splitIdx + 1)
@@ -403,15 +379,9 @@ function URI_SSR(line: string): IProxyshadowsocksRConfig {
 
   proxy = {
     ...proxy,
-    name: other_params.remarks
-      ? decodeBase64OrOriginal(other_params.remarks).trim()
-      : (proxy.server ?? ""),
-    "protocol-param": getIfNotBlank(
-      decodeBase64OrOriginal(other_params.protoparam || "").replace(/\s/g, ""),
-    ),
-    "obfs-param": getIfNotBlank(
-      decodeBase64OrOriginal(other_params.obfsparam || "").replace(/\s/g, ""),
-    ),
+    name: other_params.remarks ? decodeBase64OrOriginal(other_params.remarks).trim() : (proxy.server ?? ""),
+    "protocol-param": getIfNotBlank(decodeBase64OrOriginal(other_params.protoparam || "").replace(/\s/g, "")),
+    "obfs-param": getIfNotBlank(decodeBase64OrOriginal(other_params.obfsparam || "").replace(/\s/g, "")),
   };
   return proxy;
 }
@@ -422,8 +392,7 @@ function URI_VMESS(line: string): IProxyVmessConfig {
   // Strip #fragment before base64 decoding — some clients append #name to V2rayN URIs,
   // but '#' is not valid base64 and causes decodeBase64OrOriginal to return the raw string.
   const hashIndex = line.indexOf("#");
-  const fragment =
-    hashIndex !== -1 ? decodeURIComponent(line.slice(hashIndex + 1)) : "";
+  const fragment = hashIndex !== -1 ? decodeURIComponent(line.slice(hashIndex + 1)) : "";
   if (hashIndex !== -1) line = line.slice(0, hashIndex);
 
   let content = decodeBase64OrOriginal(line);
@@ -448,23 +417,16 @@ function URI_VMESS(line: string): IProxyVmessConfig {
       tls: params.obfs === "wss",
       udp: getIfPresent(params["udp-relay"]),
       tfo: getIfPresent(params["fast-open"]),
-      "skip-cert-verify": isPresent(params["tls-verification"])
-        ? !params["tls-verification"]
-        : undefined,
+      "skip-cert-verify": isPresent(params["tls-verification"]) ? !params["tls-verification"] : undefined,
     };
 
     if (isPresent(params.obfs)) {
       if (params.obfs === "ws" || params.obfs === "wss") {
         proxy.network = "ws";
         proxy["ws-opts"] = {
-          path:
-            (getIfNotBlank(params["obfs-path"]) || '"/"').match(
-              /^"(.*)"$/,
-            )?.[1] || "/",
+          path: (getIfNotBlank(params["obfs-path"]) || '"/"').match(/^"(.*)"$/)?.[1] || "/",
           headers: {
-            Host:
-              params["obfs-header"]?.match(/Host:\s*([a-zA-Z0-9-.]*)/)?.[1] ||
-              "",
+            Host: params["obfs-header"]?.match(/Host:\s*([a-zA-Z0-9-.]*)/)?.[1] || "",
           },
         };
       } else {
@@ -481,10 +443,7 @@ function URI_VMESS(line: string): IProxyVmessConfig {
       params = JSON.parse(content);
     } catch (e) {
       // Shadowrocket URI format
-      console.warn(
-        "[URI_VMESS] JSON.parse(content) failed, falling back to Shadowrocket parsing:",
-        e,
-      );
+      console.warn("[URI_VMESS] JSON.parse(content) failed, falling back to Shadowrocket parsing:", e);
       const match = /(^[^?]+?)\/?\?(.*)$/.exec(line);
       if (match) {
         const [_, base64Line, qs] = match;
@@ -528,9 +487,7 @@ function URI_VMESS(line: string): IProxyVmessConfig {
       cipher: getCipher(getIfPresent(params.scy, "auto")),
       uuid: params.id,
       tls: ["tls", true, 1, "1"].includes(params.tls),
-      "skip-cert-verify": isPresent(params.verify_cert)
-        ? !params.verify_cert
-        : undefined,
+      "skip-cert-verify": isPresent(params.verify_cert) ? !params.verify_cert : undefined,
     };
 
     proxy.alterId = parseInt(getIfPresent(params.aid ?? params.alterId, 0), 10);
@@ -542,11 +499,7 @@ function URI_VMESS(line: string): IProxyVmessConfig {
     let httpupgrade = false;
     if (params.net === "ws" || params.obfs === "websocket") {
       proxy.network = "ws";
-    } else if (
-      ["http"].includes(params.net) ||
-      ["http"].includes(params.obfs) ||
-      ["http"].includes(params.type)
-    ) {
+    } else if (["http"].includes(params.net) || ["http"].includes(params.obfs) || ["http"].includes(params.type)) {
       proxy.network = "http";
     } else if (["grpc"].includes(params.net)) {
       proxy.network = "grpc";
@@ -573,14 +526,10 @@ function URI_VMESS(line: string): IProxyVmessConfig {
       let transportPath = params.path;
       if (proxy.network === "http") {
         if (transportHost) {
-          transportHost = Array.isArray(transportHost)
-            ? transportHost[0]
-            : transportHost;
+          transportHost = Array.isArray(transportHost) ? transportHost[0] : transportHost;
         }
         if (transportPath) {
-          transportPath = Array.isArray(transportPath)
-            ? transportPath[0]
-            : transportPath;
+          transportPath = Array.isArray(transportPath) ? transportPath[0] : transportPath;
         } else {
           transportPath = "/";
         }
@@ -657,10 +606,7 @@ function URI_VLESS(line: string): IProxyVlessConfig {
 
   const [, uuidRaw, serverRaw, portStr, , addons = "", nameRaw] = parsed;
   // Strip IPv6 brackets: "[2001:db8::1]" → "2001:db8::1"
-  const server =
-    serverRaw.startsWith("[") && serverRaw.endsWith("]")
-      ? serverRaw.slice(1, -1)
-      : serverRaw;
+  const server = serverRaw.startsWith("[") && serverRaw.endsWith("]") ? serverRaw.slice(1, -1) : serverRaw;
   let uuid = uuidRaw;
   if (isShadowrocket) {
     uuid = uuidRaw.replace(/^.*?:/g, "");
@@ -687,11 +633,7 @@ function URI_VLESS(line: string): IProxyVlessConfig {
     params[key.toLowerCase()] = value; // 统一小写，兼容大小写混写
   }
 
-  proxy.name =
-    trimStr(name) ||
-    trimStr(params.remarks) ||
-    trimStr(params.remark) ||
-    `VLESS ${server}:${port}`;
+  proxy.name = trimStr(name) || trimStr(params.remarks) || trimStr(params.remark) || `VLESS ${server}:${port}`;
 
   // TLS 处理
   proxy.tls = (params.security && params.security !== "none") || undefined;
@@ -703,12 +645,8 @@ function URI_VLESS(line: string): IProxyVlessConfig {
   proxy.servername = params.sni || params.peer || undefined;
   proxy.flow = params.flow ? "xtls-rprx-vision" : undefined;
   proxy["client-fingerprint"] = params.fp as ClientFingerprint;
-  proxy.alpn = params.alpn
-    ? params.alpn.split(",").map((a) => a.trim())
-    : undefined;
-  proxy["skip-cert-verify"] = /(TRUE|1)/i.test(
-    params.allowinsecure || params.allowInsecure || "",
-  );
+  proxy.alpn = params.alpn ? params.alpn.split(",").map((a) => a.trim()) : undefined;
+  proxy["skip-cert-verify"] = /(TRUE|1)/i.test(params.allowinsecure || params.allowInsecure || "");
 
   // Reality 参数
   if (params.security === "reality") {
@@ -772,10 +710,7 @@ function URI_Trojan(line: string): IProxyTrojanConfig {
   const [, passwordRaw, serverRaw, , port, , addons = "", nameRaw] =
     /^(.*?)@(.*?)(:(\d+))?\/?(\?(.*?))?(?:#(.*?))?$/.exec(line) || [];
   // Strip IPv6 brackets: "[2001:db8::1]" → "2001:db8::1"
-  const server =
-    serverRaw?.startsWith("[") && serverRaw?.endsWith("]")
-      ? serverRaw.slice(1, -1)
-      : serverRaw;
+  const server = serverRaw?.startsWith("[") && serverRaw?.endsWith("]") ? serverRaw.slice(1, -1) : serverRaw;
 
   let portNum = parseInt(`${port}`, 10);
   if (isNaN(portNum)) {
@@ -864,6 +799,74 @@ function URI_Trojan(line: string): IProxyTrojanConfig {
   return proxy;
 }
 
+function URI_ANYTLS(line: string): IProxyConfig {
+  line = line.split(/anytls:\/\//)[1];
+  const [, passwordRaw, serverRaw, , port, , addons = "", nameRaw] =
+    /^(.*?)@(.*?)(:(\d+))?\/?(\?(.*?))?(?:#(.*?))?$/.exec(line) || [];
+
+  const server = serverRaw?.startsWith("[") && serverRaw?.endsWith("]") ? serverRaw.slice(1, -1) : serverRaw;
+
+  let portNum = parseInt(`${port}`, 10);
+  if (isNaN(portNum)) {
+    portNum = 443;
+  }
+
+  let password = passwordRaw;
+  password = decodeURIComponent(password);
+
+  const decodedName = trimStr(decodeURIComponent(nameRaw));
+  const name = decodedName ?? `anytls ${server}:${portNum}`;
+
+  const proxy: IProxyConfig = {
+    type: "anytls",
+    name,
+    server,
+    port: portNum,
+    password,
+  } as any;
+
+  // parse addons
+  for (const addon of (addons || "").split("&")) {
+    if (!addon) continue;
+    const [key, valueRaw] = addon.split("=");
+    const value = decodeURIComponent(valueRaw || "");
+    switch (key) {
+      case "sni":
+        proxy.sni = value;
+        break;
+      case "alpn":
+        proxy.alpn = value ? value.split(",").map((s) => s.trim()) : undefined;
+        break;
+      case "fp":
+      case "fingerprint":
+      case "client-fingerprint":
+        proxy["client-fingerprint"] = value as ClientFingerprint;
+        break;
+      case "skip-cert-verify":
+      case "allowInsecure":
+      case "allow_insecure":
+        proxy["skip-cert-verify"] = /(TRUE)|1/i.test(value);
+        break;
+      case "udp":
+        proxy.udp = /(TRUE)|1/i.test(value);
+        break;
+      case "idle-session-check-interval":
+        proxy["idle-session-check-interval"] = parseInt(value) || undefined;
+        break;
+      case "idle-session-timeout":
+        proxy["idle-session-timeout"] = parseInt(value) || undefined;
+        break;
+      case "min-idle-session":
+        proxy["min-idle-session"] = parseInt(value) || undefined;
+        break;
+      default:
+        break;
+    }
+  }
+
+  return proxy;
+}
+
 function URI_Hysteria2(line: string): IProxyHysteria2Config {
   // 兼容 # 前后都有可能带 ? 的错误格式
   const hashIndex = line.indexOf("#");
@@ -888,8 +891,7 @@ function URI_Hysteria2(line: string): IProxyHysteria2Config {
 
   // 解析 server:port
   const colonIndex = addr.lastIndexOf(":");
-  if (colonIndex === -1)
-    throw Error("No password (auth) found in hysteria2 link");
+  if (colonIndex === -1) throw Error("No password (auth) found in hysteria2 link");
   const server = addr.slice(0, colonIndex);
   const port = parseInt(addr.slice(colonIndex + 1)) || 443;
 
@@ -932,8 +934,7 @@ function URI_Hysteria2(line: string): IProxyHysteria2Config {
 
 function URI_Hysteria(line: string): IProxyHysteriaConfig {
   line = line.split(/(hysteria|hy):\/\//)[2];
-  const [, server, , port, , addons = "", nameRaw] =
-    /^(.*?)(:(\d+))?\/?(\?(.*?))?(?:#(.*?))?$/.exec(line)!;
+  const [, server, , port, , addons = "", nameRaw] = /^(.*?)(:(\d+))?\/?(\?(.*?))?(?:#(.*?))?$/.exec(line)!;
   let portNum = parseInt(`${port}`, 10);
   if (isNaN(portNum)) {
     portNum = 443;
@@ -1235,15 +1236,8 @@ function URI_HTTP(line: string): IProxyHttpConfig {
         proxy["skip-cert-verify"] = /(TRUE)|1/i.test(value);
         break;
       case "ip-version":
-        if (
-          ["dual", "ipv4", "ipv6", "ipv4-prefer", "ipv6-prefer"].includes(value)
-        ) {
-          proxy["ip-version"] = value as
-            | "dual"
-            | "ipv4"
-            | "ipv6"
-            | "ipv4-prefer"
-            | "ipv6-prefer";
+        if (["dual", "ipv4", "ipv6", "ipv4-prefer", "ipv6-prefer"].includes(value)) {
+          proxy["ip-version"] = value as "dual" | "ipv4" | "ipv6" | "ipv4-prefer" | "ipv6-prefer";
         } else {
           proxy["ip-version"] = "dual";
         }
@@ -1303,15 +1297,8 @@ function URI_SOCKS(line: string): IProxySocks5Config {
         proxy["udp"] = /(TRUE)|1/i.test(value);
         break;
       case "ip-version":
-        if (
-          ["dual", "ipv4", "ipv6", "ipv4-prefer", "ipv6-prefer"].includes(value)
-        ) {
-          proxy["ip-version"] = value as
-            | "dual"
-            | "ipv4"
-            | "ipv6"
-            | "ipv4-prefer"
-            | "ipv6-prefer";
+        if (["dual", "ipv4", "ipv6", "ipv4-prefer", "ipv6-prefer"].includes(value)) {
+          proxy["ip-version"] = value as "dual" | "ipv4" | "ipv6" | "ipv4-prefer" | "ipv6-prefer";
         } else {
           proxy["ip-version"] = "dual";
         }
@@ -1372,21 +1359,14 @@ function generateClashNode(node: any): string {
   const cleanEmpty = (obj: any): any => {
     if (obj === null || obj === undefined) return undefined;
     if (Array.isArray(obj)) {
-      const arr = obj
-        .map(cleanEmpty)
-        .filter((v) => v !== undefined && v !== null);
+      const arr = obj.map(cleanEmpty).filter((v) => v !== undefined && v !== null);
       return arr.length > 0 ? arr : undefined;
     }
     if (typeof obj === "object") {
       const cleaned: any = {};
       for (const [k, v] of Object.entries(obj)) {
         const cv = cleanEmpty(v);
-        if (
-          cv !== undefined &&
-          cv !== null &&
-          cv !== "" &&
-          (typeof cv !== "object" || Object.keys(cv).length > 0)
-        ) {
+        if (cv !== undefined && cv !== null && cv !== "" && (typeof cv !== "object" || Object.keys(cv).length > 0)) {
           cleaned[k] = cv;
         }
       }
@@ -1399,9 +1379,7 @@ function generateClashNode(node: any): string {
 
   // 生成带 - 的完整节点字符串
   const yamlLines = genYaml(cleaned, { indent: 2 }).trim().split("\n");
-  return (
-    "- " + yamlLines.map((line, i) => (i === 0 ? line : "  " + line)).join("\n")
-  );
+  return "- " + yamlLines.map((line, i) => (i === 0 ? line : "  " + line)).join("\n");
 }
 
 // ====================== 生成原始链接（完整支持所有协议）=====================
@@ -1429,10 +1407,7 @@ export function generateUri(node: any): string {
         net: node.network || "tcp",
         type: "none",
         host: node["ws-opts"]?.headers?.Host || "",
-        path:
-          node["ws-opts"]?.path ||
-          node["grpc-opts"]?.["grpc-service-name"] ||
-          "",
+        path: node["ws-opts"]?.path || node["grpc-opts"]?.["grpc-service-name"] || "",
         tls: node.tls ? "tls" : "none",
         sni: node.servername || "",
         alpn: node.alpn?.join(",") || "",
@@ -1443,9 +1418,7 @@ export function generateUri(node: any): string {
       // Encode as UTF-8 bytes before base64 so emoji / CJK names don't throw in btoa().
       const jsonStr = JSON.stringify(vmess);
       const utf8Bytes = new TextEncoder().encode(jsonStr);
-      const vmessBase64 = btoa(
-        utf8Bytes.reduce((acc, b) => acc + String.fromCharCode(b), ""),
-      );
+      const vmessBase64 = btoa(utf8Bytes.reduce((acc, b) => acc + String.fromCharCode(b), ""));
       return `vmess://${vmessBase64}`;
 
     case "vless":
@@ -1459,8 +1432,7 @@ export function generateUri(node: any): string {
         const isReality = !!node["reality-opts"];
         params.set("security", isReality ? "reality" : "tls");
 
-        if (node.servername || node.sni)
-          params.set("sni", node.servername || node.sni);
+        if (node.servername || node.sni) params.set("sni", node.servername || node.sni);
 
         if (node.fingerprint || node["client-fingerprint"])
           params.set("fp", node.fingerprint || node["client-fingerprint"]);
@@ -1482,32 +1454,35 @@ export function generateUri(node: any): string {
       return link + "?" + params.toString() + `#${name}`;
 
     case "trojan":
-      let trojan = `trojan://${encodeURIComponent(
-        node.password || "",
-      )}@${server}:${port}`;
+      let trojan = `trojan://${encodeURIComponent(node.password || "")}@${server}:${port}`;
       const tParams = new URLSearchParams();
-      if (node.network && node.network !== "tcp")
-        tParams.set("type", node.network);
-      if (node.sni || node.servername)
-        tParams.set("sni", node.sni || node.servername);
+      if (node.network && node.network !== "tcp") tParams.set("type", node.network);
+      if (node.sni || node.servername) tParams.set("sni", node.sni || node.servername);
       if (node["skip-cert-verify"]) tParams.set("allowInsecure", "1");
       if (node.fingerprint) tParams.set("fp", node.fingerprint);
-      return (
-        trojan +
-        (tParams.toString() ? "?" + tParams.toString() : "") +
-        `#${name}`
-      );
+      return trojan + (tParams.toString() ? "?" + tParams.toString() : "") + `#${name}`;
+
+    case "anytls":
+      let anytls = `anytls://${encodeURIComponent(node.password || "")}@${server}:${port}`;
+      const aParams = new URLSearchParams();
+      if (node.sni) aParams.set("sni", node.sni);
+      if (node.alpn) aParams.set("alpn", node.alpn.join(","));
+      if (node["client-fingerprint"]) aParams.set("client-fingerprint", node["client-fingerprint"]);
+      if (node["skip-cert-verify"]) aParams.set("allowInsecure", "1");
+      if (node.udp) aParams.set("udp", "1");
+      if (node["idle-session-check-interval"])
+        aParams.set("idle-session-check-interval", String(node["idle-session-check-interval"]));
+      if (node["idle-session-timeout"]) aParams.set("idle-session-timeout", String(node["idle-session-timeout"]));
+      if (node["min-idle-session"]) aParams.set("min-idle-session", String(node["min-idle-session"]));
+      return anytls + (aParams.toString() ? "?" + aParams.toString() : "") + `#${name}`;
 
     case "hysteria2":
-      let hy2 = `hysteria2://${encodeURIComponent(
-        node.password || "",
-      )}@${server}:${port}`;
+      let hy2 = `hysteria2://${encodeURIComponent(node.password || "")}@${server}:${port}`;
       const hyParams = new URLSearchParams();
 
       if (node.sni) hyParams.set("sni", node.sni);
       if (node.obfs) hyParams.set("obfs", node.obfs);
-      if (node["obfs-password"])
-        hyParams.set("obfs-password", node["obfs-password"]);
+      if (node["obfs-password"]) hyParams.set("obfs-password", node["obfs-password"]);
       if (node["skip-cert-verify"]) hyParams.set("insecure", "1");
 
       // 修复：添加 alpn
@@ -1515,25 +1490,15 @@ export function generateUri(node: any): string {
         hyParams.set("alpn", node.alpn.join(","));
       }
 
-      return (
-        hy2 +
-        (hyParams.toString() ? "?" + hyParams.toString() : "") +
-        `#${name}`
-      );
+      return hy2 + (hyParams.toString() ? "?" + hyParams.toString() : "") + `#${name}`;
 
     case "tuic":
-      let tuic = `tuic://${node.uuid}:${encodeURIComponent(
-        node.password || "",
-      )}@${server}:${port}`;
+      let tuic = `tuic://${node.uuid}:${encodeURIComponent(node.password || "")}@${server}:${port}`;
       const tuicParams = new URLSearchParams();
       if (node.sni) tuicParams.set("sni", node.sni);
       if (node.alpn) tuicParams.set("alpn", node.alpn.join(","));
       if (node["skip-cert-verify"]) tuicParams.set("allow_insecure", "1");
-      return (
-        tuic +
-        (tuicParams.toString() ? "?" + tuicParams.toString() : "") +
-        `#${name}`
-      );
+      return tuic + (tuicParams.toString() ? "?" + tuicParams.toString() : "") + `#${name}`;
 
     default:
       return "";
