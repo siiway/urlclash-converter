@@ -105,7 +105,13 @@ export async function clashToLink(yamlText: string): Promise<ConvertResult> {
       config?.Proxy,
       config?.payload,
       // proxy-providers 里嵌套的 proxies / payload
-      Object.values(config?.["proxy-providers"] || {}).flatMap((p: any) => p?.proxies || p?.payload || []),
+      ...(() => {
+        const providers = config?.["proxy-providers"];
+        if (providers && typeof providers === "object" && !Array.isArray(providers)) {
+          return Object.values(providers).flatMap((p: any) => p?.proxies || p?.payload || []);
+        }
+        return [];
+      })(),
       // 直接就是节点数组的情况
       Array.isArray(config) ? config : null,
     ]
@@ -203,9 +209,14 @@ function isIPv4(address: string): boolean {
 }
 
 function isIPv6(address: string): boolean {
-  // 仅用于 WireGuard 地址分类（调用前已先判 isIPv4）：由 hex 与冒号组成且含冒号即可。
+  // 仅用于 WireGuard 地址分类（调用前已先判 isIPv4）。
   // 旧正则的前导分组会吃掉 :: 的一个冒号，漏判 fd00::2 / 2001:db8::1 等常见压缩写法。
-  return /^[0-9a-fA-F:]+$/.test(address) && address.includes(":");
+  // 限制：至少 3 个冒号段（含压缩 ::），最多 8 个；最多一个 ::；每段最多 4 位 hex。
+  if (!address.includes(":")) return false;
+  if ((address.match(/::/g) || []).length > 1) return false;
+  const parts = address.split(":");
+  if (parts.length < 3 || parts.length > 8) return false;
+  return parts.every((p) => p === "" || /^[0-9a-fA-F]{1,4}$/.test(p));
 }
 
 function decodeBase64OrOriginal(str: string): string {
@@ -949,6 +960,7 @@ function URI_Hysteria(line: string): IProxyHysteriaConfig {
     port: portNum,
   };
 
+  let peerFallback: string | undefined;
   for (const addon of addons.split("&")) {
     let [key, value] = addon.split("=");
     key = key.replace(/_/g, "-");
@@ -983,7 +995,7 @@ function URI_Hysteria(line: string): IProxyHysteriaConfig {
         proxy["fast-open"] = /(TRUE)|1/i.test(value);
         break;
       case "peer":
-        if (!proxy.sni) proxy.sni = value;
+        peerFallback = value;
         break;
       case "recv-window-conn":
         proxy["recv-window-conn"] = parseInt(value);
@@ -1013,6 +1025,7 @@ function URI_Hysteria(line: string): IProxyHysteriaConfig {
         break;
     }
   }
+  if (!proxy.sni && peerFallback) proxy.sni = peerFallback;
 
   if (!proxy.protocol) {
     proxy.protocol = "udp";
@@ -1306,8 +1319,9 @@ function URI_SOCKS(line: string): IProxySocks5Config {
 
 // ====================== 生成 Clash 节点 =====================
 function generateClashNode(node: any): string {
+  const fallbackName = node.name || `${node.type?.toUpperCase() || "Node"} ${node.server}:${node.port}`;
   const clashNode: any = {
-    name: node.name || "Unnamed",
+    name: fallbackName,
     type: node.type,
     server: node.server ? punycodeDomain(node.server) : node.server,
     port: node.port,
@@ -1315,9 +1329,10 @@ function generateClashNode(node: any): string {
 
   // 拷贝所有协议专属字段（name/server/port/type 已单独处理）。
   // 全量拷贝而非白名单：避免新增协议（wireguard/tuic/hysteria 等）时字段被静默丢弃。
+  // 跳过以 _ 开头的内部/临时字段，防止泄漏到 YAML 输出。
   const handled = new Set(["name", "server", "port", "type"]);
   for (const field of Object.keys(node)) {
-    if (handled.has(field)) continue;
+    if (handled.has(field) || field.startsWith("_")) continue;
     if (node[field] !== undefined && node[field] !== null) {
       clashNode[field] = node[field];
     }
@@ -1367,9 +1382,10 @@ export function generateUri(node: any): string {
   const port = node.port;
 
   switch (node.type) {
-    case "ss":
-      const cipher = node.cipher || "auto";
-      const auth = utf8ToBase64(`${cipher}:${node.password || ""}`);
+    case "ss": {
+      const auth = utf8ToBase64(`${node.cipher || "auto"}:${node.password || ""}`);
+      return `ss://${auth}@${server}:${port}#${name}`;
+    }
 
     case "vmess":
       const vmess: any = {
@@ -1412,7 +1428,7 @@ export function generateUri(node: any): string {
           params.set("fp", node.fingerprint || node["client-fingerprint"]);
 
         if (node["skip-cert-verify"]) params.set("allowInsecure", "1");
-        if (node.alpn?.length) params.set("alpn", node.alpn.join(","));
+        if (Array.isArray(node.alpn) && node.alpn.length) params.set("alpn", node.alpn.join(","));
 
         // Reality 专属参数
         if (isReality) {
@@ -1440,7 +1456,7 @@ export function generateUri(node: any): string {
       let anytls = `anytls://${encodeURIComponent(node.password || "")}@${server}:${port}`;
       const aParams = new URLSearchParams();
       if (node.sni) aParams.set("sni", node.sni);
-      if (node.alpn) aParams.set("alpn", node.alpn.join(","));
+      if (Array.isArray(node.alpn) && node.alpn.length) aParams.set("alpn", node.alpn.join(","));
       if (node["client-fingerprint"]) aParams.set("client-fingerprint", node["client-fingerprint"]);
       if (node["skip-cert-verify"]) aParams.set("allowInsecure", "1");
       if (node.udp) aParams.set("udp", "1");
@@ -1470,7 +1486,7 @@ export function generateUri(node: any): string {
       let tuic = `tuic://${node.uuid}:${encodeURIComponent(node.password || "")}@${server}:${port}`;
       const tuicParams = new URLSearchParams();
       if (node.sni) tuicParams.set("sni", node.sni);
-      if (node.alpn) tuicParams.set("alpn", node.alpn.join(","));
+      if (Array.isArray(node.alpn) && node.alpn.length) tuicParams.set("alpn", node.alpn.join(","));
       if (node["skip-cert-verify"]) tuicParams.set("allow_insecure", "1");
       return tuic + (tuicParams.toString() ? "?" + tuicParams.toString() : "") + `#${name}`;
 
@@ -1482,7 +1498,7 @@ export function generateUri(node: any): string {
       if (node.sni) hParams.set("sni", node.sni);
       if (node.up) hParams.set("upmbps", String(node.up));
       if (node.down) hParams.set("downmbps", String(node.down));
-      if (node.alpn?.length) hParams.set("alpn", node.alpn.join(","));
+      if (Array.isArray(node.alpn) && node.alpn.length) hParams.set("alpn", node.alpn.join(","));
       if (node.obfs) hParams.set("obfs", node.obfs);
       if (node.ports) hParams.set("mport", String(node.ports));
       if (node["skip-cert-verify"]) hParams.set("insecure", "1");
@@ -1493,21 +1509,22 @@ export function generateUri(node: any): string {
       const wgKey = encodeURIComponent(node["private-key"] || "");
       let wg = `wireguard://${wgKey}@${server}:${port}`;
       const wgParams = new URLSearchParams();
-      if (node["public-key"]) wgParams.set("publickey", node["public-key"]);
+      if (node["public-key"]) wgParams.set("public-key", node["public-key"]);
       const wgAddrs = [node.ip, node.ipv6].filter(Boolean);
       if (wgAddrs.length) wgParams.set("address", wgAddrs.join(","));
-      if (node["allowed-ips"]?.length) wgParams.set("allowed-ips", node["allowed-ips"].join(","));
+      if (Array.isArray(node["allowed-ips"]) && node["allowed-ips"].length) wgParams.set("allowed-ips", node["allowed-ips"].join(","));
       if (node["pre-shared-key"]) wgParams.set("pre-shared-key", node["pre-shared-key"]);
       if (Array.isArray(node.reserved) && node.reserved.length === 3)
         wgParams.set("reserved", node.reserved.join(","));
       if (node.mtu) wgParams.set("mtu", String(node.mtu));
-      if (node.dns?.length) wgParams.set("dns", node.dns.join(","));
+      if (Array.isArray(node.dns) && node.dns.length) wgParams.set("dns", node.dns.join(","));
       return wg + (wgParams.toString() ? "?" + wgParams.toString() : "") + `#${name}`;
     }
 
     case "http": {
-      const httpAuth = node.username
-        ? `${encodeURIComponent(node.username)}:${encodeURIComponent(node.password || "")}@`
+      const hasAuth = !!(node.username || node.password);
+      const httpAuth = hasAuth
+        ? `${encodeURIComponent(node.username || "")}:${encodeURIComponent(node.password || "")}@`
         : "";
       let http = `http://${httpAuth}${server}:${port}`;
       const httpParams = new URLSearchParams();
@@ -1519,8 +1536,9 @@ export function generateUri(node: any): string {
     }
 
     case "socks5": {
-      const socksAuth = node.username
-        ? `${encodeURIComponent(node.username)}:${encodeURIComponent(node.password || "")}@`
+      const hasAuth = !!(node.username || node.password);
+      const socksAuth = hasAuth
+        ? `${encodeURIComponent(node.username || "")}:${encodeURIComponent(node.password || "")}@`
         : "";
       let socks = `socks5://${socksAuth}${server}:${port}`;
       const socksParams = new URLSearchParams();
