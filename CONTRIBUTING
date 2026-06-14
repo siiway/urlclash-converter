@@ -37,3 +37,9 @@ Make sure your editor is using the workspace version of TypeScript. To do this:
 3. 选择使用工作区版本
 
 > From https://github.com/cabralpinto/typescript-yaml-plugin?tab=readme-ov-file#vscode-users
+
+## Commit signing / 提交签名
+
+Use your GPG or SSH key for signing.
+
+使用你的 GPG 或者 SSH 密钥签名你的提交。
