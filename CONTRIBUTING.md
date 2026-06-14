@@ -43,3 +43,7 @@ Make sure your editor is using the workspace version of TypeScript. To do this:
 Use your GPG or SSH key for signing.
 
 使用你的 GPG 或者 SSH 密钥签名你的提交。
+
+> [!TIP]
+> This is not forced for outside-collaborators that don't directly push to the repository. <br/>
+> 外部协作者 (不直接推送到仓库) 无需强制遵守本规则.
