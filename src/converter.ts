@@ -213,9 +213,16 @@ function isIPv6(address: string): boolean {
   // 旧正则的前导分组会吃掉 :: 的一个冒号，漏判 fd00::2 / 2001:db8::1 等常见压缩写法。
   // 限制：至少 3 个冒号段（含压缩 ::），最多 8 个；最多一个 ::；每段最多 4 位 hex。
   if (!address.includes(":")) return false;
-  if ((address.match(/::/g) || []).length > 1) return false;
+  const dcolon = (address.match(/::/g) || []).length;
+  if (dcolon > 1) return false;
   const parts = address.split(":");
   if (parts.length < 3 || parts.length > 8) return false;
+  const emptyCount = parts.filter((p) => p === "").length;
+  if (dcolon === 0 && emptyCount > 0) return false;
+  if (dcolon === 1) {
+    const expectedEmpty = address.startsWith("::") || address.endsWith("::") ? 2 : 1;
+    if (emptyCount !== expectedEmpty) return false;
+  }
   return parts.every((p) => p === "" || /^[0-9a-fA-F]{1,4}$/.test(p));
 }
 
@@ -268,7 +275,7 @@ function URI_SS(line: string): IProxyShadowsocksConfig {
   // parse url
   let content = line.split("ss://")[1];
 
-  const rawName = line.split("#")[1];
+  const rawName = line.indexOf("#") >= 0 ? line.slice(line.indexOf("#") + 1) : undefined;
   const proxy: IProxyShadowsocksConfig = {
     name: rawName ? decodeURIComponent(rawName).trim() : "",
     type: "ss",
@@ -1333,7 +1340,7 @@ function generateClashNode(node: any): string {
   const handled = new Set(["name", "server", "port", "type"]);
   for (const field of Object.keys(node)) {
     if (handled.has(field) || field.startsWith("_")) continue;
-    if (node[field] !== undefined && node[field] !== null) {
+    if (node[field] !== undefined && node[field] !== null && node[field] !== "") {
       clashNode[field] = node[field];
     }
   }
