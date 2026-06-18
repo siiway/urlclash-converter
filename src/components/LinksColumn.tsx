@@ -67,6 +67,7 @@ interface LinksColumnProps {
   onChange: (v: string) => void;
   clashValue: string;
   onConvert: (outputMode: string) => void;
+  configType: "clash" | "singbox";
 }
 
 export function LinksColumn({
@@ -74,6 +75,7 @@ export function LinksColumn({
   onChange,
   clashValue,
   onConvert,
+  configType,
 }: LinksColumnProps) {
   const styles = useStyles();
   const { t } = useTranslation();
@@ -176,11 +178,13 @@ export function LinksColumn({
         />
       )}
 
-      <EngineSwitcher
-        usePyYaml={usePyYaml}
-        pyLoading={pyLoading}
-        onChange={handleEngineChange}
-      />
+      {configType === "clash" && (
+        <EngineSwitcher
+          usePyYaml={usePyYaml}
+          pyLoading={pyLoading}
+          onChange={handleEngineChange}
+        />
+      )}
 
       <Textarea
         className={styles.textarea}
@@ -190,18 +194,20 @@ export function LinksColumn({
         resize="none"
       />
 
-      <div className={styles.options}>
-        <Text weight="semibold">{t("outputFormat")}</Text>
-        <RadioGroup
-          layout="horizontal"
-          value={outputMode}
-          onChange={(e, data) => setOutputMode(data.value)}
-        >
-          <Radio value="proxies" label="proxies:" />
-          <Radio value="payload" label="payload:" />
-          <Radio value="none" label={t("noPrefix")} />
-        </RadioGroup>
-      </div>
+      {configType === "clash" && (
+        <div className={styles.options}>
+          <Text weight="semibold">{t("outputFormat")}</Text>
+          <RadioGroup
+            layout="horizontal"
+            value={outputMode}
+            onChange={(e, data) => setOutputMode(data.value)}
+          >
+            <Radio value="proxies" label="proxies:" />
+            <Radio value="payload" label="payload:" />
+            <Radio value="none" label={t("noPrefix")} />
+          </RadioGroup>
+        </div>
+      )}
 
       <Button
         className={styles.actionButton}
@@ -210,7 +216,7 @@ export function LinksColumn({
         icon={<ArrowLeftRegular />}
         onClick={() => onConvert(outputMode)}
       >
-        {t("linkToClash")}
+        {configType === "singbox" ? t("linkToSingbox") : t("linkToClash")}
       </Button>
     </div>
   );

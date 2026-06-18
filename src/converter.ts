@@ -55,7 +55,7 @@ function linksToClashNodes(links: string[]): string[] {
     .filter((node): node is string => Boolean(node));
 }
 
-function tryDecodeBase64SubscriptionLinks(links: string[]): string[] | null {
+export function tryDecodeBase64SubscriptionLinks(links: string[]): string[] | null {
   const rawText = links.join("\n").trim();
   if (!rawText) return null;
 
