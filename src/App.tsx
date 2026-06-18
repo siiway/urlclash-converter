@@ -8,6 +8,7 @@ import {
   tokens,
 } from "@fluentui/react-components";
 import { linkToClash, clashToLink } from "./converter";
+import { linkToSingbox, singboxToLink, isSingboxConfig } from "./singbox";
 import { Header } from "./components/Header";
 import { Footer } from "./components/Footer";
 import { ClashColumn } from "./components/ClashColumn";
@@ -47,19 +48,29 @@ function AppContent({
   const { t } = useTranslation();
   const [clashInput, setClashInput] = useState("");
   const [linksInput, setLinksInput] = useState("");
+  const [configType, setConfigType] = useState<"clash" | "singbox">("clash");
 
   useEffect(() => {
     document.title = t("title");
   }, [t]);
 
   const convertToLinks = async () => {
-    const result = await clashToLink(clashInput);
-    setLinksInput(result.data);
+    // config -> link：通过 JSON / YAML 自动判定配置类型
+    if (isSingboxConfig(clashInput)) {
+      setConfigType("singbox");
+      const result = singboxToLink(clashInput);
+      setLinksInput(result.data);
+    } else {
+      setConfigType("clash");
+      const result = await clashToLink(clashInput);
+      setLinksInput(result.data);
+    }
   };
 
   const convertToClash = (outputMode: string) => {
     const links = linksInput.split("\n").filter((line) => line.trim() !== "");
-    const result = linkToClash(links, outputMode as any);
+    const result =
+      configType === "singbox" ? linkToSingbox(links) : linkToClash(links, outputMode as any);
     setClashInput(result.data);
   };
 
@@ -71,6 +82,8 @@ function AppContent({
           value={clashInput}
           onChange={setClashInput}
           onConvert={convertToLinks}
+          configType={configType}
+          onConfigTypeChange={setConfigType}
         />
         <LinksColumn
           value={linksInput}

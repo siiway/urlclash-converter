@@ -33,7 +33,7 @@ export function useIoActions() {
   const handleLoadFile = (setter: (val: string) => void) => {
     const el = document.createElement("input");
     el.type = "file";
-    el.accept = ".yaml,.yml,.txt,.conf,.list";
+    el.accept = ".yaml,.yml,.json,.txt,.conf,.list";
     el.onchange = () => {
       const file = el.files?.[0];
       if (!file) return;

@@ -3,6 +3,9 @@ import {
   Button,
   Textarea,
   Title3,
+  Text,
+  RadioGroup,
+  Radio,
   makeStyles,
   tokens,
   shorthands,
@@ -40,6 +43,16 @@ const useStyles = makeStyles({
     flexWrap: "wrap",
     alignItems: "center",
   },
+  typeSelector: {
+    backgroundColor: tokens.colorNeutralBackground1,
+    ...shorthands.border("1px", "solid", tokens.colorNeutralStroke1),
+    ...shorthands.borderRadius(tokens.borderRadiusMedium),
+    padding: "12px 16px",
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    flexWrap: "wrap",
+  },
   textarea: {
     height: "400px",
     ...shorthands.border("1px", "solid", tokens.colorNeutralStroke1),
@@ -55,9 +68,17 @@ interface ClashColumnProps {
   value: string;
   onChange: (v: string) => void;
   onConvert: () => void;
+  configType: "clash" | "singbox";
+  onConfigTypeChange: (v: "clash" | "singbox") => void;
 }
 
-export function ClashColumn({ value, onChange, onConvert }: ClashColumnProps) {
+export function ClashColumn({
+  value,
+  onChange,
+  onConvert,
+  configType,
+  onConfigTypeChange,
+}: ClashColumnProps) {
   const styles = useStyles();
   const { t } = useTranslation();
   const {
@@ -77,7 +98,7 @@ export function ClashColumn({ value, onChange, onConvert }: ClashColumnProps) {
   return (
     <div className={styles.column}>
       <div className={styles.columnHeader}>
-        <Title3>{t("clashConfig")}</Title3>
+        <Title3>{configType === "singbox" ? t("singboxConfig") : t("clashConfig")}</Title3>
         <div className={styles.controls}>
           <Button
             icon={<ClipboardPasteRegular />}
@@ -93,6 +114,18 @@ export function ClashColumn({ value, onChange, onConvert }: ClashColumnProps) {
             {copyText}
           </Button>
         </div>
+      </div>
+
+      <div className={styles.typeSelector}>
+        <Text weight="semibold">{t("configType")}</Text>
+        <RadioGroup
+          layout="horizontal"
+          value={configType}
+          onChange={(_e, data) => onConfigTypeChange(data.value as "clash" | "singbox")}
+        >
+          <Radio value="clash" label={t("typeClash")} />
+          <Radio value="singbox" label={t("typeSingbox")} />
+        </RadioGroup>
       </div>
 
       <div className={styles.ioControls}>
@@ -117,7 +150,9 @@ export function ClashColumn({ value, onChange, onConvert }: ClashColumnProps) {
           appearance="subtle"
           icon={<ArrowDownloadRegular />}
           disabled={!value.trim()}
-          onClick={() => handleDownload(value, "clash-config.yaml")}
+          onClick={() =>
+            handleDownload(value, configType === "singbox" ? "sing-box.json" : "clash-config.yaml")
+          }
         >
           {t("download")}
         </Button>
@@ -142,7 +177,7 @@ export function ClashColumn({ value, onChange, onConvert }: ClashColumnProps) {
         className={styles.textarea}
         value={value}
         onChange={(e, data) => onChange(data.value)}
-        placeholder={t("clashPlaceholder")}
+        placeholder={configType === "singbox" ? t("singboxPlaceholder") : t("clashPlaceholder")}
         resize="none"
       />
 
