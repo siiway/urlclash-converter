@@ -23,6 +23,7 @@ linksPlaceholder: "每行一个节点链接（ss:// vmess:// vless:// trojan:// 
 outputFormat: "输出 Clash 格式："
 noPrefix: "无前缀"
 linkToClash: "转换为 Clash 配置"
+linkToSingbox: "转换为 sing-box 配置"
 madeWith: "Made with ❤️ by SiiWay Team · "
 license: "GPL-3.0 License"
 parserEngine: "解析引擎"

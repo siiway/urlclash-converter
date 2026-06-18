@@ -90,6 +90,7 @@ function AppContent({
           onChange={setLinksInput}
           clashValue={clashInput}
           onConvert={convertToClash}
+          configType={configType}
         />
       </div>
       <Footer />
