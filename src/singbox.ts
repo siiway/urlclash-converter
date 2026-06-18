@@ -72,6 +72,13 @@ function clean(obj: any): any {
   return obj;
 }
 
+// 严格解析端口：非法（NaN / 越界）返回 null，调用方应跳过该节点
+function toPort(value: any): number | null {
+  const p = typeof value === "number" ? value : parseInt(String(value).trim(), 10);
+  if (!Number.isFinite(p) || p <= 0 || p > 65535) return null;
+  return p;
+}
+
 // "100 Mbps" / "100" / 100 -> 100（Mbps 数值）
 function parseMbps(value: any): number | undefined {
   if (value === undefined || value === null || value === "") return undefined;
@@ -137,7 +144,9 @@ function buildSingboxTls(node: any, serverName?: string): any {
   if (ro) {
     const reality: any = { enabled: true };
     if (ro["public-key"]) reality.public_key = ro["public-key"];
-    if (ro["short-id"] !== undefined && ro["short-id"] !== null) reality.short_id = String(ro["short-id"]);
+    // short_id 是十六进制字符串，原样保留（仅在非字符串时才转换）
+    if (ro["short-id"] !== undefined && ro["short-id"] !== null)
+      reality.short_id = typeof ro["short-id"] === "string" ? ro["short-id"] : String(ro["short-id"]);
     tls.reality = reality;
   }
   return tls;
@@ -167,7 +176,10 @@ function buildSingboxTransport(node: any): any | undefined {
 
   if (net === "grpc") {
     const g = node["grpc-opts"] || {};
-    return { type: "grpc", service_name: g["grpc-service-name"] || "" };
+    const t: any = { type: "grpc" };
+    // service_name 为可选项，留空会被 clean() 清掉，故仅在非空时写入
+    if (g["grpc-service-name"]) t.service_name = g["grpc-service-name"];
+    return t;
   }
 
   if (net === "h2") {
@@ -183,6 +195,7 @@ function buildSingboxTransport(node: any): any | undefined {
     const t: any = { type: "http" };
     const host = h.headers?.Host;
     if (host) t.host = Array.isArray(host) ? host : [host];
+    // sing-box HTTP transport 的 path 只接受单个字符串，取第一个
     if (h.path) t.path = Array.isArray(h.path) ? h.path[0] : h.path;
     if (h.method) t.method = h.method;
     return t;
@@ -231,11 +244,14 @@ function clashNodeToSingbox(node: any): any | null {
   const type = CLASH_TO_SINGBOX_TYPE[node.type];
   if (!type) return null; // ssr / wireguard 等不受 sing-box 支持，跳过
 
+  const port = toPort(node.port);
+  if (port === null) return null; // 端口非法则跳过该节点
+
   const out: any = {
     type,
     tag: node.name || `${node.type} ${node.server}:${node.port}`,
     server: node.server ? punycodeDomain(node.server) : node.server,
-    server_port: Number(node.port) || node.port,
+    server_port: port,
   };
 
   switch (node.type) {
@@ -262,7 +278,8 @@ function clashNodeToSingbox(node: any): any | null {
     }
     case "vless": {
       out.uuid = node.uuid;
-      if (node.flow) out.flow = "xtls-rprx-vision"; // sing-box 仅支持该值
+      // flow 仅在 TLS/Reality 下有效；保留原值而非硬编码，避免误表示非 XTLS 节点
+      if (node.flow && (node.tls || node["reality-opts"])) out.flow = node.flow;
       if (node.tls || node["reality-opts"]) out.tls = buildSingboxTls(node, node.servername);
       const tr = buildSingboxTransport(node);
       if (tr) out.transport = tr;
@@ -310,12 +327,13 @@ function clashNodeToSingbox(node: any): any | null {
     }
     case "anytls": {
       out.password = node.password || "";
-      if (node["idle-session-check-interval"])
-        out.idle_session_check_interval = `${parseDurationSeconds(node["idle-session-check-interval"])}s`;
-      if (node["idle-session-timeout"])
-        out.idle_session_timeout = `${parseDurationSeconds(node["idle-session-timeout"])}s`;
-      if (node["min-idle-session"] !== undefined && node["min-idle-session"] !== null)
-        out.min_idle_session = Number(node["min-idle-session"]);
+      const checkInterval = parseDurationSeconds(node["idle-session-check-interval"]);
+      if (checkInterval !== undefined) out.idle_session_check_interval = `${checkInterval}s`;
+      const idleTimeout = parseDurationSeconds(node["idle-session-timeout"]);
+      if (idleTimeout !== undefined) out.idle_session_timeout = `${idleTimeout}s`;
+      const minIdle = Number(node["min-idle-session"]);
+      if (Number.isFinite(minIdle) && node["min-idle-session"] !== undefined && node["min-idle-session"] !== null)
+        out.min_idle_session = minIdle;
       out.tls = buildSingboxTls(node, node.sni || node.servername);
       break;
     }
@@ -326,7 +344,7 @@ function clashNodeToSingbox(node: any): any | null {
       break;
     }
     case "socks5": {
-      out.version = "5";
+      // sing-box socks 默认 version "5"，无需显式设置（设置会掩盖 socks4/4a 意图）
       if (node.username) out.username = node.username;
       if (node.password) out.password = node.password;
       break;
@@ -351,7 +369,8 @@ function applyTlsToNode(node: any, tls: any, snField: "servername" | "sni"): voi
     const reality: any = {};
     if (tls.reality.public_key) reality["public-key"] = tls.reality.public_key;
     if (tls.reality.short_id !== undefined && tls.reality.short_id !== null)
-      reality["short-id"] = String(tls.reality.short_id);
+      reality["short-id"] =
+        typeof tls.reality.short_id === "string" ? tls.reality.short_id : String(tls.reality.short_id);
     node["reality-opts"] = reality;
   }
 }
@@ -403,11 +422,14 @@ function singboxToClashNode(out: any): any | null {
   const type = SINGBOX_TO_CLASH_TYPE[out.type];
   if (!type) return null;
 
+  const port = toPort(out.server_port);
+  if (port === null) return null; // 端口非法则跳过该 outbound
+
   const node: any = {
     name: out.tag || `${out.type} ${out.server}:${out.server_port}`,
     type,
     server: out.server,
-    port: Number(out.server_port) || out.server_port,
+    port,
   };
 
   switch (out.type) {
@@ -507,8 +529,8 @@ function parseLinksToNodes(links: string[]): any[] {
     .map((link) => {
       try {
         return parseUri(link.trim());
-      } catch (e) {
-        console.error(e);
+      } catch {
+        // 单行解析失败属预期（空行/无效链接），静默跳过避免日志噪音
         return null;
       }
     })
@@ -581,7 +603,16 @@ export function singboxToLink(jsonText: string): ConvertResult {
 }
 
 // 检测配置文本是 sing-box (JSON) 还是 Clash (YAML)
+// 仅靠首字符判断会误判（如以 `{` 开头的 flow-style YAML、含 BOM 的 JSON），
+// 故先做形态判断再尝试严格 JSON 解析，失败则回退按 Clash YAML 处理。
 export function isSingboxConfig(text: string): boolean {
-  const trimmed = text.trim();
-  return trimmed.startsWith("{") || trimmed.startsWith("[");
+  const trimmed = text.replace(/^\uFEFF/, "").trim();
+  if (!trimmed) return false;
+  if (!(trimmed.startsWith("{") || trimmed.startsWith("["))) return false;
+  try {
+    JSON.parse(trimmed);
+    return true;
+  } catch {
+    return false;
+  }
 }
